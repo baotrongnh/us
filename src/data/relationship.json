@@ -1,18 +1,21 @@
 {
   "brand": { "name": "ours.", "tagline": "a little place for us." },
-  "relationship": { "firstPerson": "Trọng", "secondPerson": "Thanh", "profileName": "Trọng", "profileSubtitle": "with Thanh", "profileInitial": "T", "startDate": "2026-09-15" },
+  "relationship": { "firstPerson": "Trọng", "secondPerson": "Thanh", "profileName": "Trọng", "profileSubtitle": "with Thanh", "profileInitial": "T", "startDate": "2026-09-20" },
   "navigation": [
-    { "title": "Home", "items": [{ "label": "Home", "icon": "home", "active": true }] },
-    { "title": "Together", "items": [{ "label": "Timeline", "icon": "timeline" }, { "label": "Memories", "icon": "memories" }, { "label": "Places", "icon": "places" }, { "label": "Date ideas", "icon": "dateIdeas" }, { "label": "Random date", "icon": "randomDate" }, { "label": "Wishlist", "icon": "wishlist" }] },
-    { "title": "Personal", "items": [{ "label": "Letters", "icon": "letters" }, { "label": "Important dates", "icon": "importantDates" }, { "label": "Our story", "icon": "ourStory" }] }
+    { "title": "Your space", "items": [{ "label": "Home", "icon": "home", "active": true }, { "label": "Memories", "icon": "memories" }, { "label": "Random date", "icon": "randomDate" }, { "label": "Letters", "icon": "letters" }] }
   ],
-  "labels": { "currentDateFormat": "EEEE, d MMMM", "greeting": "Good evening,", "addMemory": "Add a memory", "addMemoryNotice": "A new memory is ready to be added.", "settings": "Settings", "help": "Help & feedback", "lastWeekend": "Last weekend", "counterLabel": "Our little number", "daysTogether": "days together", "since": "since", "counterNote": "Here's to all the ordinary days in between.", "recentEyebrow": "A few things to revisit", "recentTitle": "Recently", "viewAll": "View all", "comingUp": "Coming up", "anniversaryTitle": "Our anniversary", "daysToGo": "to go", "footer": "Made slowly, just for the two of you." },
+  "labels": { "currentDateFormat": "EEEE, d MMMM", "greeting": "Good evening,", "addMemory": "Add a memory", "addMemoryNotice": "A new memory is ready to be added.", "settings": "Settings", "help": "Help & feedback", "lastWeekend": "Last weekend", "counterLabel": "Our little number", "daysTogether": "days together", "since": "since", "counterNote": "Here's to all the ordinary days in between.", "recentEyebrow": "A few things to revisit", "recentTitle": "Recently", "viewAll": "View all", "comingUp": "Coming up", "anniversaryTitle": "Our anniversary", "daysToGo": "to go", "footer": "Made slowly, just for the two of you.", "memoryDialogTitle": "Add a memory", "memoryTitleLabel": "What happened?", "memoryTitlePlaceholder": "A moment worth keeping", "memoryLocationLabel": "Where were you?", "memoryLocationPlaceholder": "Add a place (optional)", "saveMemory": "Save memory", "cancel": "Cancel", "memorySavedNotice": "Memory added to Recently." },
   "featuredMemory": { "dateLabel": "08.08.26", "captionLines": ["Some moments deserve", "a place to stay."] },
   "recentItems": [
-    { "kind": "memory", "label": "MEMORY", "dateLabel": "08 AUG", "title": "Slow mornings, good coffee.", "meta": "The Workshop, D1", "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80" },
-    { "kind": "date", "label": "DATE", "dateLabel": "LAST FRIDAY", "title": "Movie night at home", "meta": "2 hours, low effort" },
-    { "kind": "letter", "label": "LETTER", "dateLabel": "01 AUG", "title": "For one of those days", "meta": "Open whenever you need", "previewGreeting": "Dear you,", "previewLines": ["There's something I", "want you to know..."] }
+    { "kind": "memory", "label": "MEMORY", "dateLabel": "09 AUG", "title": "First Date.", "meta": "Ho Chi Minh", "image": "/firstdate.jpg" },
+    { "kind": "memory", "label": "MEMORY", "dateLabel": "20 AUG", "title": "Flower.", "meta": "Ho Chi Minh", "image": "/flower.jpg" },
+    { "kind": "memory", "label": "MEMORY", "dateLabel": "20 AUG", "title": "Emm", "meta": "Ho Chi Minh", "image": "/buudien.jpg" }
   ],
   "quote": { "text": "The best things in life are the people we love, the places we've been, and the memories we've made along the way.", "source": "a little reminder" },
-  "images": { "featured": "https://images.unsplash.com/photo-1542206395-9feb3edaa68d?auto=format&fit=crop&w=1100&q=85" }
+  "music": {
+    "title": "Lễ Đường",
+    "artist": "Kai Đinh · piano cover",
+    "source": "/audio/Le%CC%82%CC%83%20%C4%90u%CC%9Bo%CC%9B%CC%80ng%20(Kai%20%C4%90inh)%20_%20Alice%20Piano%20cover%20x%20Synthesia%20tutorial%20-%20(64%20Kbps).mp3"
+  },
+  "images": { "featured": "/hero.jpg" }
 }
