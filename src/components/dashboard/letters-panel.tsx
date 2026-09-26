@@ -25,7 +25,7 @@ interface Letter {
   fullText: string;
 }
 
-function cleanVietnameseText(str: string): string {
+function cleanVietnameseText(str?: string): string {
   if (!str) return "";
   let text = str.normalize("NFC");
   // Remove space between vowel/consonant and combining accent mark
@@ -470,10 +470,47 @@ function LetterCard({
 
 export function LettersPanel() {
   const [unlocked, setUnlocked] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [letters, setLetters] = useState<Letter[]>([]);
   const [openLetter, setOpenLetter] = useState<Letter | null>(null);
 
+  useEffect(() => {
+    fetch("/api/letters")
+      .then((res) => {
+        if (res.ok) {
+          return res.json().then((data) => {
+            setLetters(data.letters || []);
+            setUnlocked(true);
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingAuth(false));
+  }, []);
+
+  const fetchLetters = async () => {
+    try {
+      const res = await fetch("/api/letters");
+      if (res.ok) {
+        const data = await res.json();
+        setLetters(data.letters || []);
+        setUnlocked(true);
+      }
+    } catch {}
+  };
+
+  if (checkingAuth) {
+    return (
+      <div className="letters-gate">
+        <div className="letters-gate-inner">
+          <p className="letters-gate-sub">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!unlocked) {
-    return <SectionPasswordGate onSuccess={() => setUnlocked(true)} />;
+    return <SectionPasswordGate onSuccess={fetchLetters} />;
   }
 
   return (
@@ -484,12 +521,12 @@ export function LettersPanel() {
           <h2>Letters</h2>
         </div>
         <p className="letters-count-badge">
-          <BookHeart size={14} /> {lettersData.letters.length} letters
+          <BookHeart size={14} /> {letters.length} letters
         </p>
       </div>
 
       <div className="letters-grid">
-        {lettersData.letters.map((letter) => (
+        {letters.map((letter) => (
           <LetterCard
             key={letter.id}
             letter={letter}

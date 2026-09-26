@@ -1,0 +1,15 @@
+{
+  "password": "000008",
+  "letters": [
+    {
+      "id": "letter-example-1",
+      "title": "Gửi người anh yêu,",
+      "from": "Your Name",
+      "to": "Her Name",
+      "date": "2026-01-01",
+      "location": "Hà Nội",
+      "images": ["/letter-sample.jpg"],
+      "fullText": "Đây là lá thư mẫu. Hãy thay thế nội dung này trong file src/data/letters.json bằng lá thư của bạn!\n\n— Tên của bạn"
+    }
+  ]
+}
