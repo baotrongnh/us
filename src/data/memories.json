@@ -1,0 +1,32 @@
+{
+  "featuredMemory": {
+    "dateLabel": "20.09.26",
+    "captionLines": ["Some moments deserve", "a place to stay."]
+  },
+  "recentItems": [
+    {
+      "kind": "memory",
+      "label": "MEMORY",
+      "dateLabel": "20 SEP",
+      "title": "First Date.",
+      "meta": "Ho Chi Minh",
+      "image": "/firstdate.jpg"
+    },
+    {
+      "kind": "memory",
+      "label": "MEMORY",
+      "dateLabel": "20 SEP",
+      "title": "Flower.",
+      "meta": "Ho Chi Minh",
+      "image": "/flower.jpg"
+    },
+    {
+      "kind": "memory",
+      "label": "MEMORY",
+      "dateLabel": "20 SEP",
+      "title": "Bưu Điện",
+      "meta": "Ho Chi Minh",
+      "image": "/buudien.jpg"
+    }
+  ]
+}
