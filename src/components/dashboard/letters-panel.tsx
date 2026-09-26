@@ -13,9 +13,17 @@ import {
   X,
 } from "lucide-react";
 import { format } from "date-fns";
-import lettersData from "@/data/letters.json";
-
-type Letter = (typeof lettersData.letters)[number];
+interface Letter {
+  id: string;
+  title: string;
+  date: string;
+  from: string;
+  to: string;
+  location?: string;
+  imageUrl?: string;
+  images?: string[];
+  fullText: string;
+}
 
 function cleanVietnameseText(str: string): string {
   if (!str) return "";
@@ -66,26 +74,44 @@ function SectionPasswordGate({ onSuccess }: { onSuccess: () => void }) {
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [shaking, setShaking] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, []);
 
-  const checkCode = (nextDigits: string[]) => {
-    if (nextDigits.some((d) => d === "")) return;
-    const code = nextDigits.join("");
-    if (code === lettersData.password) {
-      onSuccess();
-    } else {
+  const checkCode = async (nextDigits: string[]) => {
+    if (nextDigits.some((d) => d === "") || isVerifying) return;
+    const pin = nextDigits.join("");
+    setIsVerifying(true);
+    setErrorMsg("");
+
+    try {
+      const res = await fetch("/api/letters/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        onSuccess();
+      } else {
+        setShaking(true);
+        setErrorMsg(data.error || "Incorrect PIN code. Try again.");
+        setTimeout(() => {
+          setDigits(["", "", "", "", "", ""]);
+          setShaking(false);
+          inputRefs.current[0]?.focus();
+        }, 650);
+      }
+    } catch {
       setShaking(true);
-      setErrorMsg("Incorrect code. Try again.");
-      setTimeout(() => {
-        setDigits(["", "", "", "", "", ""]);
-        setShaking(false);
-        setErrorMsg("");
-        inputRefs.current[0]?.focus();
-      }, 650);
+      setErrorMsg("Network error. Please try again.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -124,6 +150,7 @@ function SectionPasswordGate({ onSuccess }: { onSuccess: () => void }) {
               inputMode="numeric"
               maxLength={1}
               value={d}
+              disabled={isVerifying}
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               className={`pin-input ${d ? "pin-filled" : ""}`}
