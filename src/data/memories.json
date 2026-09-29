@@ -8,6 +8,22 @@
       "kind": "memory",
       "label": "MEMORY",
       "dateLabel": "20 SEP",
+      "title": "Confession Day",
+      "meta": "Ho Chi Minh",
+      "image": "/flower_2.jpg"
+    },
+    {
+      "kind": "memory",
+      "label": "MEMORY",
+      "dateLabel": "26 SEP",
+      "title": "Locket Memory",
+      "meta": "Ho Chi Minh",
+      "image": "/mem2.jpg"
+    },
+    {
+      "kind": "memory",
+      "label": "MEMORY",
+      "dateLabel": "19 Aug",
       "title": "First Date.",
       "meta": "Ho Chi Minh",
       "image": "/firstdate.jpg"
@@ -15,7 +31,7 @@
     {
       "kind": "memory",
       "label": "MEMORY",
-      "dateLabel": "20 SEP",
+      "dateLabel": "N/A",
       "title": "Flower.",
       "meta": "Ho Chi Minh",
       "image": "/flower.jpg"
@@ -23,7 +39,7 @@
     {
       "kind": "memory",
       "label": "MEMORY",
-      "dateLabel": "20 SEP",
+      "dateLabel": "N/A",
       "title": "Bưu Điện",
       "meta": "Ho Chi Minh",
       "image": "/buudien.jpg"

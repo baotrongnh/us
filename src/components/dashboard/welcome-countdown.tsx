@@ -128,7 +128,7 @@ export function WelcomeCountdown() {
         </div>
 
         <button className="welcome-countdown-btn" onClick={handleClose}>
-          Let&apos;s go →
+          Okey
         </button>
       </div>
     </div>

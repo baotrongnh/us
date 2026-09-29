@@ -2,8 +2,8 @@
   "enabled": true,
   "title": "Counting down to us",
   "subtitle": "A special moment is waiting",
-  "targetDate": "2026-11-08",
-  "targetTime": "08:00",
-  "arrivedMessage": "Today is the day! 🎉",
+  "targetDate": "2026-11-07",
+  "targetTime": "23:59",
+  "arrivedMessage": "The day we met! 🎉",
   "arrivedSubtitle": "Wishing you a beautiful day together."
 }

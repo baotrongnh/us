@@ -20,7 +20,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import content from "@/data/relationship.json";
 import memoriesData from "@/data/memories.json";
 import { MusicPlayer } from "@/components/dashboard/music-player";
@@ -68,12 +68,6 @@ const sectionMap: Record<string, Section> = {
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "pastel-pink";
-  const saved = window.localStorage.getItem("relationship-theme");
-  return themes.some((t) => t.id === saved) ? (saved as Theme) : "pastel-pink";
-}
 
 function getGreeting(date: Date = new Date()): string {
   const hour = date.getHours();
@@ -336,7 +330,7 @@ function HomePanel({
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
 export function OursDashboard() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [theme, setTheme] = useState<Theme>("pastel-pink");
   const [navOpen, setNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<Section>("home");
   const [notice, setNotice] = useState("");
@@ -350,6 +344,13 @@ export function OursDashboard() {
     source: string;
     title: string;
   } | null>(null);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("relationship-theme");
+    if (saved && themes.some((t) => t.id === saved)) {
+      setTheme(saved as Theme);
+    }
+  }, []);
 
   const today = new Date();
 
