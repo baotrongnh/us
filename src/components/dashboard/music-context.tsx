@@ -113,6 +113,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         audio.play().catch(() => setMusicError("Could not play this audio file."));
         return;
       }
+      pendingPlay.current = true;
       setCurrentIndex((prev) => {
         return (prev + 1) % currentPlaylist.length;
       });

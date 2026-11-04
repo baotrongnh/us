@@ -18,6 +18,7 @@ This is the Next.js client for **ours.**, a private relationship dashboard for T
 - `src/app/layout.tsx`: document metadata and global stylesheet entry.
 - `src/app/globals.css`: shared theme tokens, component styles, responsive layouts, and animations.
 - `src/components/dashboard/ours-dashboard.tsx`: app shell, theme/language pickers, navigation, global dialogs, and memory actions. Keep feature content in its own panel component.
+- `src/components/dashboard/language-picker.tsx`: shared language picker used by both the dashboard and maintenance screen.
 - `src/components/dashboard/home-panel.tsx`: relationship day counter, upcoming events, quotes, recent memories, and the home layout.
 - `src/components/dashboard/location-map-card.tsx`: lazy-loaded Leaflet map and relationship location markers.
 - `src/components/dashboard/random-date-panel.tsx`: date-idea filtering, location menu, daily non-repeating randomizer, and tick sound.
@@ -27,17 +28,20 @@ This is the Next.js client for **ours.**, a private relationship dashboard for T
 - `src/components/dashboard/music-player.tsx` and `music-context.tsx`: playlist controls and shared audio state.
 - `src/components/dashboard/language-context.tsx`: supported locale strings and language state. Keep user-editable quote copy in `src/data/quotes.json`, not in this translation table.
 - `src/app/api/`: server routes for music and letters.
-- `src/lib/`: small shared utilities and types such as locale-aware date formatting and memory records.
+- `src/app/admin/page.tsx` and `src/components/admin/admin-panel.tsx`: English-only admin page at `/admin`, password protected with the Letters password; password is only kept in page memory and sent per request. Do not persist an Admin session until specifically requested.
+- `src/app/api/admin/`: Admin password verification and protected site-settings endpoints. Keep Supabase service-key access server-only.
+- `src/lib/`: small shared utilities and types such as locale-aware date formatting, memory records, Admin password verification, and Supabase site settings.
+- Supabase maintenance settings use the `public.site_config` singleton row (`id = 1`) and its JSON `setting` column; `setting.maintenance` must be a boolean. `SUPABASE_URL` may be either the project URL or the REST endpoint ending in `/rest/v1/site_config`.
 - `public/images/` and `public/audio/`: static media served by the app.
 
 ## Editable data
 
-- `src/data/relationship.json`: names, relationship start date, map center/zoom/locations, and featured image path.
+- `src/data/relationship.json`: names, relationship start date, and featured image path.
+- `src/data/site-config.json`: remaining project-local settings including Random Date's default location, map center/locations, and welcome countdown event copy/date/time. Maintenance mode is read only from Supabase; continue moving remaining site settings to Supabase as they are configured.
 - `src/data/memories.json`: featured date and recent memory records.
 - `src/data/random-dates.json`: date ideas, their supported locations, and image paths. Daily randomizer history is stored in browser localStorage and resets by local date.
 - `src/data/quotes.json`: home-page quotes, grouped by display language.
 - `src/data/upcoming-events.json`: upcoming relationship events.
-- `src/data/welcome-modal.json`: welcome countdown enablement and target date/time.
 - `src/data/letters.json`: private letter content and the PIN fallback. Do not copy private content into example files or client-side code.
 
 Remove unused fields when editing data, and update consumers/types in the same change. Do not create example JSON files unless a real setup workflow needs them.

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { AlertCircle, LoaderCircle } from "lucide-react";
-import relationshipData from "@/data/relationship.json";
+import siteConfig from "@/data/site-config.json";
 import { useLanguage } from "@/components/dashboard/language-context";
 
 type MapLocation = {
@@ -14,7 +14,7 @@ type MapLocation = {
   coords: [number, number];
 };
 
-const mapConfig = relationshipData.map;
+const mapConfig = siteConfig.map;
 const mapLocations: MapLocation[] = mapConfig.locations.map((location) => {
   const [latitude, longitude] = location.coords;
   if (
@@ -22,7 +22,7 @@ const mapLocations: MapLocation[] = mapConfig.locations.map((location) => {
     !Number.isFinite(latitude) ||
     !Number.isFinite(longitude)
   ) {
-    throw new Error(`Invalid map location "${location.id}" in relationship.json.`);
+    throw new Error(`Invalid map location "${location.id}" in site-config.json.`);
   }
 
   return {

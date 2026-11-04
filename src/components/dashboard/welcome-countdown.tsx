@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import welcomeConfig from "@/data/welcome-modal.json";
+import siteConfig from "@/data/site-config.json";
 import { useLanguage } from "@/components/dashboard/language-context";
+
+const welcomeConfig = siteConfig.welcomeModal;
 
 type TimeLeft = {
   days: number;
@@ -31,6 +33,8 @@ function pad(n: number) {
 
 export function WelcomeCountdown({ onDismiss }: { onDismiss: () => void }) {
   const { t, locale } = useLanguage();
+  const event = welcomeConfig.event;
+  const { title: eventTitle, eyebrow: eventEyebrow, description: eventDescription, arrivedTitle, arrivedMessage } = event;
   const [open, setOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
   const [visible, setVisible] = useState(false);
@@ -43,7 +47,7 @@ export function WelcomeCountdown({ onDismiss }: { onDismiss: () => void }) {
     }
 
     const update = () => {
-      setTimeLeft(getTimeLeft(welcomeConfig.targetDate, welcomeConfig.targetTime));
+      setTimeLeft(getTimeLeft(event.targetDate, event.targetTime));
     };
 
     const initialUpdate = window.setTimeout(() => {
@@ -58,7 +62,7 @@ export function WelcomeCountdown({ onDismiss }: { onDismiss: () => void }) {
       window.clearTimeout(showModal);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [onDismiss]);
+  }, [event.targetDate, event.targetTime, onDismiss]);
 
   const handleClose = () => {
     setVisible(false);
@@ -78,7 +82,7 @@ export function WelcomeCountdown({ onDismiss }: { onDismiss: () => void }) {
       onMouseDown={handleClose}
       role="dialog"
       aria-modal="true"
-      aria-label={t("welcomeTitle")}
+      aria-label={eventTitle}
     >
       <div
         className={`ui-modal-surface welcome-countdown-modal ${visible ? "visible" : ""}`}
@@ -96,14 +100,15 @@ export function WelcomeCountdown({ onDismiss }: { onDismiss: () => void }) {
           <span>♡</span>
         </div>
 
-        <p className="eyebrow welcome-countdown-eyebrow">{t("welcomeEyebrow")}</p>
-        <h2 className="welcome-countdown-title">{t("welcomeTitle")}</h2>
+        <p className="eyebrow welcome-countdown-eyebrow">{eventEyebrow}</p>
+        <h2 className="welcome-countdown-title">{eventTitle}</h2>
+        <p className="welcome-countdown-description">{eventDescription}</p>
 
         {hasArrived ? (
           <div className="welcome-countdown-arrived">
             <p className="welcome-arrived-emoji">🎉</p>
-            <p className="welcome-arrived-msg">{t("welcomeArrived")}</p>
-            <p className="welcome-arrived-sub">{t("welcomeArrivedSubtitle")}</p>
+            <p className="welcome-arrived-msg">{arrivedTitle}</p>
+            <p className="welcome-arrived-sub">{arrivedMessage}</p>
           </div>
         ) : (
           <div className="countdown-grid">
@@ -130,13 +135,13 @@ export function WelcomeCountdown({ onDismiss }: { onDismiss: () => void }) {
         )}
 
         <div className="welcome-countdown-target">
-          {new Date(`${welcomeConfig.targetDate}T${welcomeConfig.targetTime}:00`).toLocaleDateString(locale, {
+          {new Date(`${event.targetDate}T${event.targetTime}:00`).toLocaleDateString(locale, {
             weekday: "long",
             year: "numeric",
             month: "long",
             day: "numeric",
           })}{" "}
-          · {welcomeConfig.targetTime}
+          · {event.targetTime}
         </div>
 
         <button className="welcome-countdown-btn" onClick={handleClose}>

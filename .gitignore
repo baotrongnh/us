@@ -40,6 +40,7 @@ src/data/*.json
 !src/data/*.example.json
 !src/data/upcoming-events.json
 !src/data/quotes.json
+!src/data/site-config.json
 
 # vercel
 .vercel

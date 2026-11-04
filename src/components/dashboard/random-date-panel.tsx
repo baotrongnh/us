@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Calendar, Check, ChevronDown, Clock3, MapPin, Shuffle } from "lucide-react";
 import randomDatesData from "@/data/random-dates.json";
+import siteConfig from "@/data/site-config.json";
 import { useLanguage, type TranslationKey } from "@/components/dashboard/language-context";
 
 export const randomDateIdeaTranslations: Record<string, {
@@ -52,6 +53,14 @@ export const randomDateIdeaTranslations: Record<string, {
 
 const locations = ["hanoi", "ho-chi-minh"] as const;
 type DateLocation = (typeof locations)[number];
+function getDefaultLocation(): DateLocation {
+  const configuredLocation = siteConfig.randomDate.defaultLocation;
+  if (configuredLocation === "hanoi" || configuredLocation === "ho-chi-minh") {
+    return configuredLocation;
+  }
+  throw new Error(`Invalid default Random Date location "${configuredLocation}" in site-config.json.`);
+}
+const defaultLocation = getDefaultLocation();
 
 type DailyDateHistory = {
   date: string;
@@ -120,7 +129,7 @@ function saveDailyHistory(history: DailyDateHistory) {
 export function RandomDatePanel() {
   const { t } = useLanguage();
   const [notice, setNotice] = useState<string | null>(null);
-  const [location, setLocation] = useState<DateLocation>("hanoi");
+  const [location, setLocation] = useState<DateLocation>(defaultLocation);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [locationMenuLeft, setLocationMenuLeft] = useState<number | null>(null);
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
