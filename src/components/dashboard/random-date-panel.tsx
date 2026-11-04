@@ -122,10 +122,12 @@ export function RandomDatePanel() {
   const [notice, setNotice] = useState<string | null>(null);
   const [location, setLocation] = useState<DateLocation>("hanoi");
   const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [locationMenuLeft, setLocationMenuLeft] = useState<number | null>(null);
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const spinTimerRef = useRef<number | null>(null);
   const locationPickerRef = useRef<HTMLDivElement>(null);
+  const locationTriggerRef = useRef<HTMLButtonElement>(null);
   const tickAudioContextRef = useRef<AudioContext | null>(null);
   const savedIdeaId = useSyncExternalStore(
     subscribeToDateHistory,
@@ -145,6 +147,24 @@ export function RandomDatePanel() {
     ideas.find((idea) => idea.id === savedIdeaId) ??
     ideas[0];
 
+  const positionLocationMenu = () => {
+    const picker = locationPickerRef.current;
+    const trigger = locationTriggerRef.current;
+    if (!picker || !trigger || window.innerWidth > 720) {
+      setLocationMenuLeft(null);
+      return;
+    }
+
+    const menuWidth = Math.min(250, window.innerWidth - 32);
+    const triggerBounds = trigger.getBoundingClientRect();
+    const pickerBounds = picker.getBoundingClientRect();
+    const left = Math.max(
+      16,
+      Math.min(triggerBounds.right - menuWidth, window.innerWidth - menuWidth - 16)
+    );
+    setLocationMenuLeft(left - pickerBounds.left);
+  };
+
   useEffect(() => {
     return () => {
       if (spinTimerRef.current) window.clearTimeout(spinTimerRef.current);
@@ -155,6 +175,13 @@ export function RandomDatePanel() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isLocationOpen) return;
+    const handleResize = () => positionLocationMenu();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isLocationOpen]);
 
   useEffect(() => {
     if (!isLocationOpen) return;
@@ -268,6 +295,7 @@ export function RandomDatePanel() {
     setIsSpinning(false);
     setLocation(nextLocation);
     setSelectedIdeaId(null);
+    setLocationMenuLeft(null);
     setIsLocationOpen(false);
   };
 
@@ -285,10 +313,14 @@ export function RandomDatePanel() {
           <button
             type="button"
             className="theme-picker-trigger random-date-location-trigger"
+            ref={locationTriggerRef}
             aria-label={`${t("location")}: ${t(location === "hanoi" ? "locationHanoi" : "locationHoChiMinh")}`}
             aria-haspopup="listbox"
             aria-expanded={isLocationOpen}
-            onClick={() => setIsLocationOpen((open) => !open)}
+            onClick={() => {
+              if (!isLocationOpen) positionLocationMenu();
+              setIsLocationOpen((open) => !open);
+            }}
           >
             <MapPin size={15} aria-hidden="true" />
             <span>{t("location")}</span>
@@ -296,7 +328,10 @@ export function RandomDatePanel() {
             <ChevronDown size={14} aria-hidden="true" />
           </button>
           {isLocationOpen && (
-            <div className="theme-picker-menu random-date-location-menu">
+            <div
+              className="theme-picker-menu random-date-location-menu"
+              style={locationMenuLeft === null ? undefined : { left: `${locationMenuLeft}px` }}
+            >
               <p className="language-picker-label">{t("location")}</p>
               <div role="listbox" aria-label={t("location")}>
                 {locations.map((item) => {

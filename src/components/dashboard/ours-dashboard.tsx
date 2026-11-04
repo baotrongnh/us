@@ -7,8 +7,8 @@ import {
   Download,
   House,
   ImageIcon,
-  Mic,
   Palette,
+  Rocket,
   Sparkles,
   X,
   type LucideIcon,
@@ -23,7 +23,7 @@ import { MemoriesSection } from "@/components/dashboard/memories-section";
 import { HomePanel } from "@/components/dashboard/home-panel";
 import { LettersPanel } from "@/components/dashboard/letters-panel";
 import { RandomDatePanel } from "@/components/dashboard/random-date-panel";
-import { WhispersPanel } from "@/components/dashboard/whispers-panel";
+import { ComingSoonPanel } from "@/components/dashboard/coming-soon-panel";
 import welcomeConfig from "@/data/welcome-modal.json";
 import { LanguageProvider, useLanguage, type Language, type TranslationKey } from "@/components/dashboard/language-context";
 import { formatLocalizedDate } from "@/lib/date-format";
@@ -32,7 +32,7 @@ import type { RecentItem } from "@/lib/types";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Theme = "pastel-pink" | "midnight" | "blue-pastel";
-type Section = "home" | "memories" | "randomDate" | "letters" | "whispers";
+type Section = "home" | "memories" | "randomDate" | "letters" | "comingSoon";
 
 // ── Theme config ─────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ const navIcons: Record<string, LucideIcon> = {
   memories: ImageIcon,
   randomDate: Sparkles,
   letters: BookHeart,
-  whispers: Mic,
+  comingSoon: Rocket,
 };
 
 const navigationItems: { icon: string; label: TranslationKey; section: Section }[] = [
@@ -60,7 +60,7 @@ const navigationItems: { icon: string; label: TranslationKey; section: Section }
   { icon: "memories", label: "memories", section: "memories" },
   { icon: "randomDate", label: "randomDate", section: "randomDate" },
   { icon: "letters", label: "letters", section: "letters" },
-  { icon: "whispers", label: "whispers", section: "whispers" },
+  { icon: "comingSoon", label: "comingSoon", section: "comingSoon" },
 ];
 
 // ── NavItem ──────────────────────────────────────────────────────────────────
@@ -264,12 +264,12 @@ function LanguagePicker() {
 
 // ── Mobile Bottom Nav ─────────────────────────────────────────────────────────
 
-const bottomNavItems: { key: Section; label: string; icon: LucideIcon }[] = [
-  { key: "home",       label: "Home",    icon: House },
-  { key: "memories",   label: "Memories",icon: ImageIcon },
-  { key: "randomDate", label: "Date",    icon: Sparkles },
-  { key: "letters",    label: "Letters", icon: BookHeart },
-  { key: "whispers",   label: "Whispers",icon: Mic },
+const bottomNavItems: { key: Section; icon: LucideIcon }[] = [
+  { key: "home", icon: House },
+  { key: "memories", icon: ImageIcon },
+  { key: "randomDate", icon: Sparkles },
+  { key: "letters", icon: BookHeart },
+  { key: "comingSoon", icon: Rocket },
 ];
 
 function MobileBottomNav({
@@ -285,7 +285,7 @@ function MobileBottomNav({
     memories: t("memories"),
     randomDate: t("date"),
     letters: t("letters"),
-    whispers: t("whispers"),
+    comingSoon: t("comingSoon"),
   };
   return (
     <nav className="mobile-bottom-nav" aria-label={t("yourSpace")}>
@@ -561,7 +561,7 @@ function DashboardContent() {
 
           {activeSection === "letters" && <LettersPanel />}
 
-          {activeSection === "whispers" && <WhispersPanel />}
+          {activeSection === "comingSoon" && <ComingSoonPanel />}
         </div>
       </main>
 

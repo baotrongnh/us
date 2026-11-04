@@ -72,7 +72,7 @@ export function MusicPlayer() {
     observer.observe(viewport);
     observer.observe(text);
     return () => observer.disconnect();
-  }, [songTitle]);
+  }, [isLoading, songTitle]);
 
   if (isLoading) {
     return (

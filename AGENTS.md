@@ -21,12 +21,12 @@ This is the Next.js client for **ours.**, a private relationship dashboard for T
 - `src/components/dashboard/home-panel.tsx`: relationship day counter, upcoming events, quotes, recent memories, and the home layout.
 - `src/components/dashboard/location-map-card.tsx`: lazy-loaded Leaflet map and relationship location markers.
 - `src/components/dashboard/random-date-panel.tsx`: date-idea filtering, location menu, daily non-repeating randomizer, and tick sound.
-- `src/components/dashboard/memories-section.tsx`: memory carousel and full grid.
+- `src/components/dashboard/memories-section.tsx`: responsive memories gallery and add-memory action.
 - `src/components/dashboard/letters-panel.tsx`: private letters, PIN gate, detail modal, and image viewer.
-- `src/components/dashboard/whispers-panel.tsx`: private audio-message UI.
+- `src/components/dashboard/coming-soon-panel.tsx`: placeholder destination for future features.
 - `src/components/dashboard/music-player.tsx` and `music-context.tsx`: playlist controls and shared audio state.
 - `src/components/dashboard/language-context.tsx`: supported locale strings and language state. Keep user-editable quote copy in `src/data/quotes.json`, not in this translation table.
-- `src/app/api/`: server routes for music, letters, and whispers.
+- `src/app/api/`: server routes for music and letters.
 - `src/lib/`: small shared utilities and types such as locale-aware date formatting and memory records.
 - `public/images/` and `public/audio/`: static media served by the app.
 
