@@ -29,6 +29,7 @@ import siteConfig from "@/data/site-config.json";
 import { LanguageProvider, useLanguage, type TranslationKey } from "@/components/dashboard/language-context";
 import { formatLocalizedDate } from "@/lib/date-format";
 import type { RecentItem } from "@/lib/types";
+import type { MapLocation } from "@/lib/map-location";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -240,7 +241,7 @@ function Sidebar({
 
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
-function DashboardContent() {
+function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
   const { t, locale } = useLanguage();
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") return "pastel-pink";
@@ -432,6 +433,7 @@ function DashboardContent() {
         >
           {activeSection === "home" && (
             <HomePanel
+              mapLocations={mapLocations}
               recentItems={recentItems}
               onOpenImage={(source, title) => setImagePreview({ source, title })}
               onNavigate={navigate}
@@ -568,10 +570,10 @@ function DashboardContent() {
   );
 }
 
-export function OursDashboard() {
+export function OursDashboard({ mapLocations }: { mapLocations: MapLocation[] }) {
   return (
     <LanguageProvider>
-      <DashboardContent />
+      <DashboardContent mapLocations={mapLocations} />
     </LanguageProvider>
   );
 }

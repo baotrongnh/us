@@ -31,13 +31,14 @@ This is the Next.js client for **ours.**, a private relationship dashboard for T
 - `src/app/admin/page.tsx` and `src/components/admin/admin-panel.tsx`: English-only admin page at `/admin`, password protected with the Letters password; password is only kept in page memory and sent per request. Do not persist an Admin session until specifically requested.
 - `src/app/api/admin/`: Admin password verification and protected site-settings endpoints. Keep Supabase service-key access server-only.
 - `src/lib/`: small shared utilities and types such as locale-aware date formatting, memory records, Admin password verification, and Supabase site settings.
-- Supabase maintenance settings use the `public.site_config` singleton row (`id = 1`) and its JSON `setting` column; `setting.maintenance` must be a boolean. `SUPABASE_URL` may be either the project URL or the REST endpoint ending in `/rest/v1/site_config`.
+- Supabase site settings use the `public.site_config` singleton row (`id = 1`) and its JSON `setting` column. Maintenance is stored at `setting.maintenance`; relationship map positions are stored at `setting.map.locations`. `SUPABASE_URL` may be either the project URL or the REST endpoint ending in `/rest/v1/site_config`.
 - `public/images/` and `public/audio/`: static media served by the app.
 
 ## Editable data
 
 - `src/data/relationship.json`: names, relationship start date, and featured image path.
-- `src/data/site-config.json`: remaining project-local settings including Random Date's default location, map center/locations, and welcome countdown event copy/date/time. Maintenance mode is read only from Supabase; continue moving remaining site settings to Supabase as they are configured.
+- `src/data/site-config.json`: remaining project-local settings including Random Date's default location, map center, map-person identities, and welcome countdown event copy/date/time. Maintenance mode and relationship map positions are read from Supabase; continue moving remaining site settings as they are configured.
+- `src/data/location-presets.json`: editable preset locations available in the Admin map-position editor.
 - `src/data/memories.json`: featured date and recent memory records.
 - `src/data/random-dates.json`: date ideas, their supported locations, and image paths. Daily randomizer history is stored in browser localStorage and resets by local date.
 - `src/data/quotes.json`: home-page quotes, grouped by display language.

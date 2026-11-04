@@ -5,34 +5,9 @@ import { useEffect, useState } from "react";
 import { AlertCircle, LoaderCircle } from "lucide-react";
 import siteConfig from "@/data/site-config.json";
 import { useLanguage } from "@/components/dashboard/language-context";
-
-type MapLocation = {
-  id: string;
-  name?: string;
-  city?: string;
-  gender: "male" | "female";
-  coords: [number, number];
-};
+import type { MapLocation } from "@/lib/map-location";
 
 const mapConfig = siteConfig.map;
-const mapLocations: MapLocation[] = mapConfig.locations.map((location) => {
-  const [latitude, longitude] = location.coords;
-  if (
-    (location.gender !== "male" && location.gender !== "female") ||
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude)
-  ) {
-    throw new Error(`Invalid map location "${location.id}" in site-config.json.`);
-  }
-
-  return {
-    id: location.id,
-    name: location.name,
-    city: location.city,
-    gender: location.gender,
-    coords: [latitude, longitude],
-  };
-});
 
 const LocationMapBody = dynamic(
   async () => {
@@ -53,16 +28,36 @@ const LocationMapBody = dynamic(
       return null;
     }
 
+    function groupLocations(locations: MapLocation[]) {
+      const groups = new Map<string, MapLocation[]>();
+      for (const location of locations) {
+        const key = `${location.coords[0]},${location.coords[1]}`;
+        const group = groups.get(key);
+        if (group) group.push(location);
+        else groups.set(key, [location]);
+      }
+
+      return [...groups.values()].map((members) => ({
+        id: members.map(({ id }) => id).join("-"),
+        name: members.map(({ name }) => name).join(" & "),
+        city: [...new Set(members.map(({ city }) => city))].join(" & "),
+        gender: members.length > 1 ? "together" as const : members[0].gender,
+        coords: members[0].coords,
+      }));
+    }
+
     return function LocationMapBodyInner({
+      locations,
       tileUrl,
       onTilesLoaded,
       onTileError,
     }: {
+      locations: MapLocation[];
       tileUrl: string;
       onTilesLoaded: () => void;
       onTileError: () => void;
     }) {
-      const markerIcon = (gender: "male" | "female") =>
+      const markerIcon = (gender: "male" | "female" | "together") =>
         divIcon({
           className: "date-map-pin-wrapper",
           html: `<div class="date-map-pin is-${gender}"><span></span></div>`,
@@ -87,8 +82,8 @@ const LocationMapBody = dynamic(
               tileerror: onTileError,
             }}
           />
-          <FitMapToLocations locations={mapLocations} />
-          {mapLocations.map((marker) => (
+          <FitMapToLocations locations={locations} />
+          {groupLocations(locations).map((marker) => (
             <Marker
               key={marker.id}
               position={marker.coords}
@@ -114,7 +109,7 @@ const LocationMapBody = dynamic(
   { ssr: false, loading: () => null }
 );
 
-export function LocationMapCard() {
+export function LocationMapCard({ locations }: { locations: MapLocation[] }) {
   const { t } = useLanguage();
   const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "error">("loading");
   const vietmapApiKey = process.env.NEXT_PUBLIC_VIETMAP_KEY;
@@ -132,6 +127,7 @@ export function LocationMapCard() {
         aria-busy={mapStatus === "loading"}
       >
         <LocationMapBody
+          locations={locations}
           tileUrl={tileUrl}
           onTilesLoaded={() => setMapStatus("ready")}
           onTileError={() => setMapStatus("error")}

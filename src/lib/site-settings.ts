@@ -1,6 +1,14 @@
+import siteConfig from "@/data/site-config.json";
+import type { MapLocation } from "@/lib/map-location";
+
 type SiteSettingsRow = {
   id: number;
   setting: Record<string, unknown>;
+};
+
+type SiteSettingsUpdates = {
+  maintenance?: boolean;
+  locations?: MapLocation[];
 };
 
 function getSupabaseConfig() {
@@ -26,19 +34,11 @@ function getSupabaseHeaders(serviceKey: string) {
   };
 }
 
-export async function getMaintenanceMode() {
-  const config = getSupabaseConfig();
-  if (!config) {
-    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured.");
-  }
-
-  const response = await fetch(
-    `${config.url}?id=eq.1&select=id,setting`,
-    {
-      headers: getSupabaseHeaders(config.serviceKey),
-      cache: "no-store",
-    }
-  );
+async function getSiteSettingsRow(config: NonNullable<ReturnType<typeof getSupabaseConfig>>) {
+  const response = await fetch(`${config.url}?id=eq.1&select=id,setting`, {
+    headers: getSupabaseHeaders(config.serviceKey),
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new Error(`Could not load site settings from Supabase (HTTP ${response.status}).`);
   }
@@ -48,35 +48,106 @@ export async function getMaintenanceMode() {
     !Array.isArray(rows) ||
     rows.length !== 1 ||
     typeof rows[0].setting !== "object" ||
-    rows[0].setting === null ||
-    typeof rows[0].setting.maintenance !== "boolean"
+    rows[0].setting === null
   ) {
-    throw new Error("Supabase site_config must contain id=1 and setting.maintenance as a boolean.");
+    throw new Error("Supabase site_config must contain one id=1 row with a JSON setting value.");
   }
-  return rows[0].setting.maintenance;
+  return rows[0];
 }
 
-export async function updateMaintenanceMode(maintenance: boolean) {
+export function parseMapLocations(value: unknown): MapLocation[] {
+  if (!Array.isArray(value) || value.length !== siteConfig.map.locations.length) {
+    throw new Error("Supabase site_config.setting.map.locations must contain both people.");
+  }
+
+  return siteConfig.map.locations.map((person) => {
+    if (person.gender !== "male" && person.gender !== "female") {
+      throw new Error(`Invalid gender for map location "${person.id}" in site-config.json.`);
+    }
+    const savedLocation = value.find(
+      (location): location is Record<string, unknown> =>
+        typeof location === "object" &&
+        location !== null &&
+        "id" in location &&
+        location.id === person.id
+    );
+    if (
+      !savedLocation ||
+      typeof savedLocation.city !== "string" ||
+      savedLocation.city.trim().length === 0 ||
+      !Array.isArray(savedLocation.coords) ||
+      savedLocation.coords.length !== 2 ||
+      typeof savedLocation.coords[0] !== "number" ||
+      typeof savedLocation.coords[1] !== "number" ||
+      !Number.isFinite(savedLocation.coords[0]) ||
+      !Number.isFinite(savedLocation.coords[1]) ||
+      savedLocation.coords[0] < -90 ||
+      savedLocation.coords[0] > 90 ||
+      savedLocation.coords[1] < -180 ||
+      savedLocation.coords[1] > 180
+    ) {
+      throw new Error(`Invalid Supabase map coordinates for "${person.id}".`);
+    }
+
+    return {
+      id: person.id,
+      name: person.name,
+      gender: person.gender,
+      city: savedLocation.city,
+      coords: [savedLocation.coords[0], savedLocation.coords[1]],
+    };
+  });
+}
+
+export async function getSiteSettings() {
   const config = getSupabaseConfig();
   if (!config) {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured.");
   }
 
-  const currentResponse = await fetch(`${config.url}?id=eq.1&select=id,setting`, {
-    headers: getSupabaseHeaders(config.serviceKey),
-    cache: "no-store",
-  });
-  if (!currentResponse.ok) {
-    throw new Error(`Could not load site settings before update (HTTP ${currentResponse.status}).`);
+  const { setting } = await getSiteSettingsRow(config);
+  if (typeof setting.maintenance !== "boolean") {
+    throw new Error("Supabase site_config.setting.maintenance must be a boolean.");
   }
-  const currentRows = (await currentResponse.json()) as SiteSettingsRow[];
+
+  const mapSetting =
+    typeof setting.map === "object" && setting.map !== null
+      ? setting.map as Record<string, unknown>
+      : null;
+  return {
+    maintenance: setting.maintenance,
+    locations: parseMapLocations(mapSetting?.locations),
+  };
+}
+
+export async function updateSiteSettings(updates: SiteSettingsUpdates) {
+  const config = getSupabaseConfig();
+  if (!config) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured.");
+  }
   if (
-    !Array.isArray(currentRows) ||
-    currentRows.length !== 1 ||
-    typeof currentRows[0].setting !== "object" ||
-    currentRows[0].setting === null
+    (updates.maintenance === undefined && updates.locations === undefined) ||
+    (updates.maintenance !== undefined && typeof updates.maintenance !== "boolean")
   ) {
-    throw new Error("Supabase site_config must contain one id=1 row with a JSON setting value.");
+    throw new Error("Provide a valid maintenance value or map locations to update.");
+  }
+
+  const currentRow = await getSiteSettingsRow(config);
+  const setting = { ...currentRow.setting };
+
+  if (updates.maintenance !== undefined) {
+    setting.maintenance = updates.maintenance;
+  }
+  if (updates.locations) {
+    const locations = parseMapLocations(updates.locations);
+    const mapSetting =
+      typeof setting.map === "object" && setting.map !== null
+        ? setting.map as Record<string, unknown>
+        : {};
+    setting.map = {
+      ...mapSetting,
+      locations: locations.map(({ id, city, coords }) => ({ id, city, coords })),
+    };
   }
 
   const response = await fetch(`${config.url}?id=eq.1`, {
@@ -85,9 +156,7 @@ export async function updateMaintenanceMode(maintenance: boolean) {
       ...getSupabaseHeaders(config.serviceKey),
       Prefer: "return=representation",
     },
-    body: JSON.stringify({
-      setting: { ...currentRows[0].setting, maintenance },
-    }),
+    body: JSON.stringify({ setting }),
     cache: "no-store",
   });
   if (!response.ok) {
@@ -95,13 +164,23 @@ export async function updateMaintenanceMode(maintenance: boolean) {
   }
 
   const rows = (await response.json()) as SiteSettingsRow[];
-  if (
-    !Array.isArray(rows) ||
-    rows.length !== 1 ||
-    typeof rows[0].setting?.maintenance !== "boolean" ||
-    rows[0].setting.maintenance !== maintenance
-  ) {
-    throw new Error("No site_config row was updated or its maintenance value did not match.");
+  if (!Array.isArray(rows) || rows.length !== 1) {
+    throw new Error("No site_config row was updated.");
   }
-  return rows[0].setting.maintenance;
+  if (
+    updates.maintenance !== undefined &&
+    rows[0].setting.maintenance !== updates.maintenance
+  ) {
+    throw new Error("The updated maintenance value did not match the requested value.");
+  }
+  if (updates.locations) {
+    const updatedMap = rows[0].setting.map;
+    const locations = parseMapLocations(
+      typeof updatedMap === "object" && updatedMap !== null
+        ? (updatedMap as Record<string, unknown>).locations
+        : undefined
+    );
+    return { maintenance: rows[0].setting.maintenance, locations };
+  }
+  return { maintenance: rows[0].setting.maintenance };
 }

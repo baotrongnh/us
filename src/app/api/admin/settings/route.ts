@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdminPassword } from "@/lib/admin-auth";
-import { getMaintenanceMode, updateMaintenanceMode } from "@/lib/site-settings";
+import type { MapLocation } from "@/lib/map-location";
+import { getSiteSettings, parseMapLocations, updateSiteSettings } from "@/lib/site-settings";
 
 async function authorize(request: Request) {
   const password = request.headers.get("x-admin-password");
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const authError = await authorize(request);
   if (authError) return authError;
   try {
-    return NextResponse.json({ maintenance: await getMaintenanceMode() });
+    return NextResponse.json(await getSiteSettings());
   } catch (error) {
     console.error("Could not read admin site settings.", error);
     return NextResponse.json({ error: "Could not load settings. Check the Supabase configuration." }, { status: 503 });
@@ -32,19 +33,41 @@ export async function PATCH(request: Request) {
   const authError = await authorize(request);
   if (authError) return authError;
 
-  let body: { maintenance?: unknown };
+  let body: { maintenance?: unknown; locations?: unknown };
+  let locations: MapLocation[] | undefined;
   try {
-    body = await request.json();
+    const requestBody: unknown = await request.json();
+    if (typeof requestBody !== "object" || requestBody === null || Array.isArray(requestBody)) {
+      return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    }
+    body = requestBody as { maintenance?: unknown; locations?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
-  if (typeof body.maintenance !== "boolean") {
+
+  if ("maintenance" in body && typeof body.maintenance !== "boolean") {
     return NextResponse.json({ error: "Maintenance must be true or false." }, { status: 400 });
+  }
+  if ("locations" in body) {
+    try {
+      locations = parseMapLocations(body.locations);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Invalid map locations." },
+        { status: 400 }
+      );
+    }
+  }
+  if (!("maintenance" in body) && !("locations" in body)) {
+    return NextResponse.json({ error: "Provide a setting to update." }, { status: 400 });
   }
 
   try {
-    const maintenance = await updateMaintenanceMode(body.maintenance);
-    return NextResponse.json({ maintenance });
+    const updates = {
+      ...(typeof body.maintenance === "boolean" ? { maintenance: body.maintenance } : {}),
+      ...(locations ? { locations } : {}),
+    };
+    return NextResponse.json(await updateSiteSettings(updates));
   } catch (error) {
     console.error("Could not update admin site settings.", error);
     return NextResponse.json({ error: "Could not save settings. Check the Supabase table and permissions." }, { status: 503 });

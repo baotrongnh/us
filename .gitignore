@@ -41,6 +41,7 @@ src/data/*.json
 !src/data/upcoming-events.json
 !src/data/quotes.json
 !src/data/site-config.json
+!src/data/location-presets.json
 
 # vercel
 .vercel

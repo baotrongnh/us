@@ -17,6 +17,7 @@ import { LocationMapCard } from "@/components/dashboard/location-map-card";
 import { useLanguage } from "@/components/dashboard/language-context";
 import { formatLocalizedDate } from "@/lib/date-format";
 import type { RecentItem } from "@/lib/types";
+import type { MapLocation } from "@/lib/map-location";
 
 type UpcomingEvent = {
   id: string;
@@ -136,12 +137,14 @@ function AnimatedCount({
 }
 
 export function HomePanel({
+  mapLocations,
   recentItems,
   onOpenImage,
   onNavigate,
   animateCounter,
   onCounterAnimationComplete,
 }: {
+  mapLocations: MapLocation[];
   recentItems: RecentItem[];
   onOpenImage: (source: string, title: string) => void;
   onNavigate: (section: "memories") => void;
@@ -417,7 +420,7 @@ export function HomePanel({
             </button>
           </div>
         </article>
-        <LocationMapCard />
+        <LocationMapCard locations={mapLocations} />
       </section>
 
       <section className="section-block recently-section">
