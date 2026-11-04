@@ -39,6 +39,7 @@ yarn-error.log*
 src/data/*.json
 !src/data/*.example.json
 !src/data/upcoming-events.json
+!src/data/quotes.json
 
 # vercel
 .vercel
