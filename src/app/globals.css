@@ -26,10 +26,20 @@
 [data-theme="midnight"] {
   --background: #10131a; --foreground: #f4f6fb; --primary: #f0a8c0;
   --card: #191e29; --muted: #242b38; --border: #394153; --muted-text: #c0c8d6;
+  --modal-overlay: rgba(5, 7, 10, .75);
+  --modal-glass: color-mix(in srgb, var(--card) 92%, transparent);
+  --modal-border: color-mix(in srgb, white 20%, var(--border));
+  --modal-shadow: 0 34px 100px rgba(0, 0, 0, .65);
+  --modal-control: color-mix(in srgb, var(--card) 85%, transparent);
 }
 [data-theme="blue-pastel"] {
   --background: #f0f4ff; --foreground: #1a2340; --primary: #7baff5;
   --card: #fff; --muted: #e4ecff; --border: #c8d9f8; --muted-text: #5a6fa8;
+  --modal-overlay: rgba(20, 30, 50, .18);
+  --modal-glass: color-mix(in srgb, var(--card) 92%, transparent);
+  --modal-border: color-mix(in srgb, white 60%, var(--border));
+  --modal-shadow: 0 34px 100px rgba(26, 35, 64, .25);
+  --modal-control: color-mix(in srgb, var(--card) 70%, transparent);
 }
 
 /* ── Keyframe Animations ──────────────────────────────────────────────────── */
@@ -65,6 +75,9 @@ body {
   font-family: 'Inter', system-ui, Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+h1, h2, h3, h4, h5, h6 {
+  color: var(--foreground);
+}
 button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Better scrollbar styling */
@@ -78,6 +91,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   min-height: 100vh;
   display: flex;
   background: var(--background);
+  color: var(--foreground);
   transition: background .25s ease, color .25s ease;
 }
 
@@ -333,31 +347,35 @@ button { font: inherit; color: inherit; cursor: pointer; }
   top: calc(100% + 10px);
   left: 0;
   width: 270px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 12px 36px rgba(0,0,0,.16);
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, white);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  box-shadow: 0 16px 42px color-mix(in srgb, var(--foreground) 16%, transparent);
+  backdrop-filter: blur(24px) saturate(1.45);
+  -webkit-backdrop-filter: blur(24px) saturate(1.45);
   z-index: 1000;
   overflow: hidden;
-  animation: modal-in .2s ease;
+  animation: card-arrive .18s ease-out both;
 }
 .music-playlist-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px 10px;
-  font-size: 11px;
+  padding: 5px 10px 6px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--muted-text);
-  letter-spacing: .8px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  margin-bottom: 4px;
 }
 .music-playlist-close {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border: 0;
   background: transparent;
   color: var(--muted-text);
@@ -368,27 +386,34 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .music-playlist-list {
   list-style: none;
   margin: 0;
-  padding: 6px;
-  max-height: 240px;
+  padding: 2px 0;
+  max-height: min(240px, 45vh);
   overflow-y: auto;
   scrollbar-width: thin;
 }
 .music-playlist-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
   padding: 8px 10px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
   text-align: left;
-  font-size: 12.5px;
+  font: inherit;
+  font-size: 12px;
   color: var(--foreground);
   transition: .15s ease;
 }
-.music-playlist-item:hover { background: var(--muted); }
-.music-playlist-item.active { background: color-mix(in srgb, var(--primary) 12%, var(--card)); color: var(--primary); font-weight: 600; }
+.music-playlist-item:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.music-playlist-item.active {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+}
 .playlist-play-icon { flex: none; color: var(--muted-text); }
 .music-playlist-item.active .playlist-play-icon { color: var(--primary); }
 .playlist-track-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -637,6 +662,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transform: rotate(-1.5deg) scale(1.08);
   box-shadow: inset 0 0 30px rgba(102,79,58,.05);
 }
+[data-theme="midnight"] .paper-preview {
+  background: #202735;
+  color: #f1e8ec;
+}
 .paper-preview span, .paper-preview i { display: block; }
 .paper-preview i { margin-top: 9px; font-size: 12px; }
 .carousel-controls { display: none; }
@@ -754,12 +783,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: color .18s ease, gap .18s ease;
 }
 .upcoming-view-all:hover { gap: 8px; color: var(--primary); }
-.upcoming-events-backdrop { z-index: 110; }
+.ui-modal-backdrop.upcoming-events-backdrop { z-index: 2000; isolation: isolate; }
 .upcoming-events-modal {
+  position: relative;
+  z-index: 1;
   width: min(100%, 560px);
   max-height: min(78vh, 680px);
   overflow: auto;
   padding: 30px;
+  padding-bottom: calc(30px + env(safe-area-inset-bottom));
 }
 .upcoming-events-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .upcoming-events-heading h2 { margin: 7px 0 0; font: 400 26px/1.15 Georgia, serif; }
@@ -2595,7 +2627,7 @@ footer {
 
 .ui-modal-backdrop {
   position: fixed;
-  z-index: 80;
+  z-index: 120;
   inset: 0;
   display: grid;
   place-items: center;
@@ -2618,6 +2650,8 @@ footer {
   backdrop-filter: blur(var(--modal-blur)) saturate(112%);
 }
 .ui-modal-surface {
+  position: relative;
+  z-index: 1;
   border: 1px solid var(--modal-border);
   background:
     linear-gradient(145deg, var(--modal-glass), color-mix(in srgb, var(--card) 82%, transparent));
@@ -2799,7 +2833,7 @@ footer {
   min-width: 0;
   align-items: flex-start;
   gap: 4px;
-  padding: 2px 42px 2px 4px;
+  padding: 2px 54px 2px 4px;
 }
 .ui-modal-lightbox .lightbox-heading > span {
   color: var(--primary);
@@ -2920,7 +2954,7 @@ footer {
   .quote-card-interactive .quote-card-copy p { font-size: 15px; }
   .quote-refresh { margin-left: 24px; }
   .welcome-countdown-modal { width: min(100%, 92vw); padding: 40px 18px 26px; }
-  .welcome-countdown-title { margin-bottom: 24px; font-size: 24px; }
+  .welcome-countdown-title { margin-bottom: 24px; font-size: 24px; padding: 0 32px; }
   .countdown-grid { gap: 3px; }
   .countdown-unit { min-width: 0; flex: 1; padding: 12px 5px 10px; border-radius: 15px; }
   .countdown-number { font-size: clamp(30px, 9vw, 40px); }
@@ -2929,11 +2963,25 @@ footer {
   .ui-modal-backdrop { padding: 16px; }
   .ui-modal-lightbox { padding: 10px; }
   .ui-modal-lightbox.lightbox-content { max-height: calc(100dvh - 32px); }
+  .ui-modal-lightbox .lightbox-heading {
+    padding: 2px 48px 4px 4px;
+  }
+  .ui-modal-lightbox .lightbox-title {
+    font-size: clamp(15px, 4.2vw, 19px);
+    line-height: 1.25;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
   .ui-modal-lightbox .lightbox-image {
     max-width: calc(100vw - 60px);
     max-height: calc(100dvh - 110px);
     border-radius: 16px;
   }
+  .notifications-dialog > h2 { padding-right: 42px; }
   .upcoming-events-modal { max-height: min(78dvh, 680px); padding: 23px 18px; }
   .upcoming-event-item { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; padding: 11px; }
   .upcoming-event-item h3 { font-size: 15px; }

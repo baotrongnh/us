@@ -24,6 +24,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { createPortal } from "react-dom";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import content from "@/data/relationship.json";
 import memoriesData from "@/data/memories.json";
@@ -715,6 +716,7 @@ function HomePanel({
 
   const [reminderIndex, setReminderIndex] = useState(0);
   const [isUpcomingModalOpen, setIsUpcomingModalOpen] = useState(false);
+
   useEffect(() => {
     if (!isUpcomingModalOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -858,7 +860,7 @@ function HomePanel({
         </article>
       </section>
 
-      {isUpcomingModalOpen && (
+      {isUpcomingModalOpen && createPortal(
         <div
           className="ui-modal-backdrop upcoming-events-backdrop"
           role="dialog"
@@ -911,7 +913,8 @@ function HomePanel({
               <p className="upcoming-empty-copy">{t("noUpcomingEvents")}</p>
             )}
           </section>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Memory and date idea bento */}
@@ -1032,6 +1035,10 @@ function DashboardContent() {
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
   const dismissWelcome = useCallback(() => setCounterAnimationActive(true), []);
   const finishCounterAnimation = useCallback(() => setCounterAnimationActive(false), []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!isNotificationsOpen) return;

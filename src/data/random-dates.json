@@ -23,14 +23,14 @@
         "id": "trong",
         "name": "Trọng",
         "gender": "male",
-        "city": "Ho Chi Minh City",
+        "city": "Ho Chi Minh",
         "coords": [10.847674696232753, 106.84420178607076]
       },
       {
         "id": "thanh",
         "name": "Thanh",
         "gender": "female",
-        "city": "Hanoi",
+        "city": "Ha Noi",
         "coords": [21.03394643963963, 105.8077094597472]
       }
     ]
