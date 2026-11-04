@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Calendar, Check, ChevronDown, Clock3, MapPin, Shuffle } from "lucide-react";
 import randomDatesData from "@/data/random-dates.json";
 import { useLanguage, type TranslationKey } from "@/components/dashboard/language-context";
@@ -128,6 +128,7 @@ export function RandomDatePanel() {
   const spinTimerRef = useRef<number | null>(null);
   const locationPickerRef = useRef<HTMLDivElement>(null);
   const locationTriggerRef = useRef<HTMLButtonElement>(null);
+  const locationMenuRef = useRef<HTMLDivElement>(null);
   const tickAudioContextRef = useRef<AudioContext | null>(null);
   const savedIdeaId = useSyncExternalStore(
     subscribeToDateHistory,
@@ -147,24 +148,6 @@ export function RandomDatePanel() {
     ideas.find((idea) => idea.id === savedIdeaId) ??
     ideas[0];
 
-  const positionLocationMenu = () => {
-    const picker = locationPickerRef.current;
-    const trigger = locationTriggerRef.current;
-    if (!picker || !trigger || window.innerWidth > 720) {
-      setLocationMenuLeft(null);
-      return;
-    }
-
-    const menuWidth = Math.min(250, window.innerWidth - 32);
-    const triggerBounds = trigger.getBoundingClientRect();
-    const pickerBounds = picker.getBoundingClientRect();
-    const left = Math.max(
-      16,
-      Math.min(triggerBounds.right - menuWidth, window.innerWidth - menuWidth - 16)
-    );
-    setLocationMenuLeft(left - pickerBounds.left);
-  };
-
   useEffect(() => {
     return () => {
       if (spinTimerRef.current) window.clearTimeout(spinTimerRef.current);
@@ -176,12 +159,32 @@ export function RandomDatePanel() {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLocationOpen) return;
-    const handleResize = () => positionLocationMenu();
+    const positionMenu = () => {
+      const picker = locationPickerRef.current;
+      const trigger = locationTriggerRef.current;
+      const menu = locationMenuRef.current;
+      if (!picker || !trigger || !menu || window.innerWidth > 720) {
+        setLocationMenuLeft(null);
+        return;
+      }
+
+      const triggerBounds = trigger.getBoundingClientRect();
+      const pickerBounds = picker.getBoundingClientRect();
+      const menuWidth = menu.getBoundingClientRect().width;
+      const left = Math.max(
+        16,
+        Math.min(triggerBounds.right - menuWidth, window.innerWidth - menuWidth - 16)
+      );
+      setLocationMenuLeft(left - pickerBounds.left);
+    };
+
+    positionMenu();
+    const handleResize = () => positionMenu();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [isLocationOpen]);
+  }, [isLocationOpen, location]);
 
   useEffect(() => {
     if (!isLocationOpen) return;
@@ -317,10 +320,7 @@ export function RandomDatePanel() {
             aria-label={`${t("location")}: ${t(location === "hanoi" ? "locationHanoi" : "locationHoChiMinh")}`}
             aria-haspopup="listbox"
             aria-expanded={isLocationOpen}
-            onClick={() => {
-              if (!isLocationOpen) positionLocationMenu();
-              setIsLocationOpen((open) => !open);
-            }}
+            onClick={() => setIsLocationOpen((open) => !open)}
           >
             <MapPin size={15} aria-hidden="true" />
             <span>{t("location")}</span>
@@ -330,6 +330,7 @@ export function RandomDatePanel() {
           {isLocationOpen && (
             <div
               className="theme-picker-menu random-date-location-menu"
+              ref={locationMenuRef}
               style={locationMenuLeft === null ? undefined : { left: `${locationMenuLeft}px` }}
             >
               <p className="language-picker-label">{t("location")}</p>

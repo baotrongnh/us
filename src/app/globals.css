@@ -2414,7 +2414,10 @@ footer {
     align-items: flex-start;
     overflow: visible;
   }
-  .random-date-location { max-width: 100%; }
+  .random-date-location {
+    max-width: 100%;
+    margin-left: auto;
+  }
   .random-date-location-trigger {
     max-width: calc(100vw - 32px);
     gap: 7px;
