@@ -38,6 +38,7 @@ yarn-error.log*
 # private data files (letters, passwords, memories, etc.)
 src/data/*.json
 !src/data/*.example.json
+!src/data/upcoming-events.json
 
 # vercel
 .vercel
