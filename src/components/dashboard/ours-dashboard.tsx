@@ -23,6 +23,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import content from "@/data/relationship.json";
 import memoriesData from "@/data/memories.json";
@@ -33,10 +34,7 @@ import { MusicProvider } from "@/components/dashboard/music-context";
 import { WelcomeCountdown } from "@/components/dashboard/welcome-countdown";
 import { MemoriesSection } from "@/components/dashboard/memories-section";
 import { LettersPanel } from "@/components/dashboard/letters-panel";
-import {
-  RandomDatePanel,
-  randomDateIdeaTranslations,
-} from "@/components/dashboard/random-date-panel";
+import { RandomDatePanel } from "@/components/dashboard/random-date-panel";
 import { WhispersPanel } from "@/components/dashboard/whispers-panel";
 import welcomeConfig from "@/data/welcome-modal.json";
 import { LanguageProvider, useLanguage, type Language, type TranslationKey } from "@/components/dashboard/language-context";
@@ -118,6 +116,114 @@ function formatLocalizedDate(
   options: Intl.DateTimeFormatOptions
 ): string {
   return new Intl.DateTimeFormat(locale, options).format(date);
+}
+
+type MapLocation = {
+  id: string;
+  gender: "male" | "female";
+  coords: [number, number];
+};
+
+const mapLocations: MapLocation[] = (randomDatesData.map?.locations ?? []).map((location) => {
+  const [latitude, longitude] = location.coords;
+  if (
+    (location.gender !== "male" && location.gender !== "female") ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
+    throw new Error(`Invalid map location "${location.id}" in random-dates.json.`);
+  }
+
+  return {
+    id: location.id,
+    gender: location.gender,
+    coords: [latitude, longitude] as [number, number],
+  };
+});
+
+const LocationMapBody = dynamic(
+  async () => {
+    const [{ MapContainer, Marker, TileLayer, useMap }, { divIcon, latLngBounds }] = await Promise.all([
+      import("react-leaflet"),
+      import("leaflet"),
+    ]);
+
+    function FitMapToLocations({ locations }: { locations: MapLocation[] }) {
+      const map = useMap();
+
+      useEffect(() => {
+        if (locations.length === 0) return;
+        const bounds = latLngBounds(locations.map((location) => location.coords));
+        map.fitBounds(bounds, { padding: [48, 48], maxZoom: 6, animate: false });
+      }, [locations, map]);
+
+      return null;
+    }
+
+    return function LocationMapBodyInner({
+      markerData,
+      tileUrl,
+      mapAttribution,
+    }: {
+      markerData: MapLocation[];
+      tileUrl: string;
+      mapAttribution: string;
+    }) {
+      const markerIcon = (gender: "male" | "female") =>
+        divIcon({
+          className: "date-map-pin-wrapper",
+          html: `<div class="date-map-pin is-${gender}"><span></span></div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
+
+      return (
+        <MapContainer
+          center={[15.87, 108.32]}
+          zoom={5}
+          scrollWheelZoom
+          className="date-map-instance"
+        >
+          <TileLayer url={tileUrl} attribution={mapAttribution} />
+          <FitMapToLocations locations={markerData} />
+          {markerData.map((marker) => (
+            <Marker
+              key={marker.id}
+              position={marker.coords}
+              icon={markerIcon(marker.gender)}
+            />
+          ))}
+        </MapContainer>
+      );
+    };
+  },
+  { ssr: false }
+);
+
+function LocationMapCard() {
+  const { t } = useLanguage();
+  const mapData = randomDatesData.map;
+  const markerData = mapLocations;
+  const vietmapApiKey = process.env.NEXT_PUBLIC_VIETMAP_KEY;
+
+  const tileUrl = vietmapApiKey
+    ? `https://maps.vietmap.vn/maps/tiles/st/{z}/{x}/{y}.png?apikey=${encodeURIComponent(vietmapApiKey)}`
+    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const mapAttribution = vietmapApiKey
+    ? '&copy; <a href="https://vietmap.vn/">VietMap</a>'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
+
+  return (
+    <article className="location-map-card">
+      <div className="date-map-pane" aria-label={t("whereWeAre")}>
+        <LocationMapBody
+          markerData={markerData}
+          tileUrl={tileUrl}
+          mapAttribution={mapAttribution}
+        />
+      </div>
+    </article>
+  );
 }
 
 function AnimatedCount({
@@ -586,18 +692,6 @@ function HomePanel({
       ? t("anniversaryDescription")
       : event.description ?? t("everyDayCloser");
 
-  const sharedDateIdeas = randomDatesData.ideas.filter(
-    (idea) => idea.location === "all" && randomDateIdeaTranslations[idea.id]
-  );
-  const [dateIdea, setDateIdea] = useState<
-    (typeof randomDatesData.ideas)[number] | null
-  >(null);
-  useEffect(() => {
-    setDateIdea(sharedDateIdeas[Math.floor(Math.random() * sharedDateIdeas.length)] ?? null);
-  }, []);
-  const dateIdeaCopy = dateIdea
-    ? randomDateIdeaTranslations[dateIdea.id]
-    : undefined;
   const [reminderIndex, setReminderIndex] = useState(0);
   const [isUpcomingModalOpen, setIsUpcomingModalOpen] = useState(false);
   useEffect(() => {
@@ -831,40 +925,7 @@ function HomePanel({
             </button>
           </div>
         </article>
-        {dateIdea && dateIdeaCopy && (
-          <article className="date-idea-card">
-            <div
-              className={`date-idea-photo ${dateIdea.image ? "has-image" : ""}`}
-              role={dateIdea.image ? "img" : undefined}
-              aria-label={dateIdea.image ? t(dateIdeaCopy.title) : undefined}
-              style={dateIdea.image ? { backgroundImage: `url("${dateIdea.image}")` } : undefined}
-            >
-              {!dateIdea.image && <span>{t(dateIdeaCopy.title)}</span>}
-            </div>
-            <div className="date-idea-details">
-              <div className="date-idea-heading">
-                <p className="eyebrow">{t("littlePlan")}</p>
-                <h2>{t("nextDateIdea")}</h2>
-              </div>
-              <div className="date-idea-content">
-                <h3>{t(dateIdeaCopy.title)}</h3>
-                <p>{t(dateIdeaCopy.description)}</p>
-                <div className="date-idea-meta">
-                  <span>{t(dateIdeaCopy.duration)}</span>
-                  <span>{t(dateIdeaCopy.budget)}</span>
-                </div>
-              </div>
-              <div className="date-idea-actions">
-                <button type="button" className="date-idea-explore" onClick={() => onNavigate("randomDate")}>
-                  <span>{t("explore")}</span>
-                  <span className="date-idea-explore-icon" aria-hidden="true">
-                    <ChevronRight size={16} />
-                  </span>
-                </button>
-              </div>
-            </div>
-          </article>
-        )}
+        <LocationMapCard />
       </section>
 
       {/* Recently */}
@@ -927,7 +988,11 @@ function HomePanel({
 
 function DashboardContent() {
   const { t, locale } = useLanguage();
-  const [theme, setTheme] = useState<Theme>("pastel-pink");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "pastel-pink";
+    const saved = window.localStorage.getItem("relationship-theme");
+    return saved && themes.some((option) => option.id === saved) ? (saved as Theme) : "pastel-pink";
+  });
   const [navOpen, setNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<Section>("home");
   const [counterAnimationActive, setCounterAnimationActive] = useState(!welcomeConfig.enabled);
@@ -955,13 +1020,6 @@ function DashboardContent() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isNotificationsOpen]);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("relationship-theme");
-    if (saved && themes.some((t) => t.id === saved)) {
-      setTheme(saved as Theme);
-    }
-  }, []);
 
   const today = new Date();
 

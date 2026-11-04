@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 export type Language = "en" | "vi" | "ja" | "zh" | "de";
 
@@ -41,6 +41,7 @@ const translations = {
     lastWeekend: "Last weekend",
     littlePlan: "A little plan for two",
     nextDateIdea: "Our next date idea",
+    whereWeAre: "Where we are",
     explore: "Explore",
     recentEyebrow: "A few things to revisit",
     recently: "Recently",
@@ -186,6 +187,7 @@ const translations = {
     lastWeekend: "Cuối tuần trước",
     littlePlan: "Một kế hoạch nhỏ cho hai người",
     nextDateIdea: "Ý tưởng hẹn hò tiếp theo",
+    whereWeAre: "Vị trí của chúng mình",
     explore: "Khám phá",
     recentEyebrow: "Một vài điều muốn nhớ lại",
     recently: "Gần đây",
@@ -331,6 +333,7 @@ const translations = {
     lastWeekend: "先週末",
     littlePlan: "ふたりの小さな計画",
     nextDateIdea: "次のデートのアイデア",
+    whereWeAre: "ふたりの位置",
     explore: "見る",
     recentEyebrow: "もう一度見たい思い出",
     recently: "最近",
@@ -476,6 +479,7 @@ const translations = {
     lastWeekend: "上个周末",
     littlePlan: "两个人的小计划",
     nextDateIdea: "下次约会的点子",
+    whereWeAre: "我们的位置",
     explore: "探索",
     recentEyebrow: "重温一些美好时刻",
     recently: "最近",
@@ -621,6 +625,7 @@ const translations = {
     lastWeekend: "Letztes Wochenende",
     littlePlan: "Ein kleiner Plan zu zweit",
     nextDateIdea: "Eure nächste Date-Idee",
+    whereWeAre: "Wo wir sind",
     explore: "Entdecken",
     recentEyebrow: "Ein paar schöne Erinnerungen",
     recently: "Zuletzt",
@@ -752,12 +757,11 @@ const localeByLanguage: Record<Language, string> = {
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
-
-  useEffect(() => {
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window === "undefined") return "en";
     const saved = window.localStorage.getItem("relationship-language");
-    if (saved && saved in translations) setLanguageState(saved as Language);
-  }, []);
+    return saved && saved in translations ? (saved as Language) : "en";
+  });
 
   const setLanguage = (nextLanguage: Language) => {
     setLanguageState(nextLanguage);

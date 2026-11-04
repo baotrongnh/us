@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 /* ── Theme Variables ──────────────────────────────────────────────────────── */
 :root {
@@ -673,7 +674,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .memories-thumb-info span { display: block; margin-top: 4px; color: var(--muted-text); font-size: 11px; }
 
 /* ── Lower grid ───────────────────────────────────────────────────────────── */
-.lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 18px; }
+.lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.14fr) minmax(0, 0.86fr);
+  gap: 16px;
+  padding-top: 18px;
+  align-items: stretch;
+}
 .upcoming-card, .quote-card, .date-idea-card { padding: 24px 26px; min-height: 176px; }
 .upcoming-card {
   display: flex;
@@ -787,8 +794,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .quote-source { display: block; margin: 12px 0 0 22px; color: var(--muted-text); font-size: 10px; }
 .date-idea-card {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
-  min-height: 390px;
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+  min-height: 360px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 22px;
@@ -798,6 +805,124 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: 0 12px 34px color-mix(in srgb, var(--foreground) 5%, transparent);
   transition: border-color .35s ease, box-shadow .4s ease, transform .4s var(--ease-out);
 }
+.location-map-card {
+  min-width: 0;
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.location-map-card .date-map-pane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  background: linear-gradient(180deg, #dfeaf7 0%, #e8f0ff 100%);
+}
+.location-map-card .date-map-instance {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  background: linear-gradient(180deg, #d4e4f7 0%, #eaf5ff 100%);
+}
+.location-map-card .leaflet-control-zoom {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(20, 25, 35, .18);
+}
+.location-map-card .leaflet-control-zoom a {
+  width: 34px;
+  height: 34px;
+  color: #252a33;
+  line-height: 32px;
+}
+.location-map-card .leaflet-control-attribution {
+  border-radius: 8px 0 0;
+  padding: 2px 6px;
+  font-size: 9px;
+}
+.date-map-pin-wrapper {
+  background: transparent;
+  border: 0;
+}
+.date-map-pin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.85);
+  box-shadow: 0 0 0 8px rgba(255,255,255,.18), 0 12px 28px rgba(22, 27, 34, .28);
+  animation: map-pin-pulse 1.7s ease-out infinite;
+}
+.date-map-pin span {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.date-map-pin.is-female {
+  color: #f39bb7;
+  background: rgba(243, 155, 183, .92);
+}
+.date-map-pin.is-male {
+  color: #6fa8ff;
+  background: rgba(111, 168, 255, .92);
+}
+@keyframes map-pin-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255,255,255,.0)); }
+  45% { transform: scale(1.15); filter: drop-shadow(0 0 12px rgba(255,255,255,.6)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255,255,255,.0)); }
+}
+.date-map-summary {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.date-map-lookup-error {
+  margin: 10px 0 0;
+  color: var(--muted-text);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.date-map-person-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+}
+.date-map-person-row div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.date-map-person-row strong {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 700;
+}
+.date-map-person-row span {
+  color: var(--muted-text);
+  font-size: 11px;
+}
+.date-map-person-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.18);
+}
+.date-map-person-dot.female { background: #f39bb7; }
+.date-map-person-dot.male { background: #6fa8ff; }
 .date-idea-photo {
   position: relative;
   min-width: 0;
@@ -848,7 +973,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: clamp(24px, 3vw, 36px);
+  padding: clamp(18px, 2vw, 28px);
 }
 .date-idea-heading { display: block; }
 .date-idea-heading h2 { margin: 7px 0 0; font: 400 22px/1.17 Georgia, serif; letter-spacing: -.6px; }
@@ -857,11 +982,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
   flex: 1;
   flex-direction: column;
   justify-content: center;
-  margin: 24px 0;
+  margin: 18px 0 20px;
 }
-.date-idea-content h3 { margin: 0; font: 400 clamp(25px, 2vw, 34px)/1.15 Georgia, serif; letter-spacing: -.5px; }
-.date-idea-content p { max-width: 42ch; margin: 12px 0 0; color: var(--muted-text); font-size: 13px; line-height: 1.7; }
-.date-idea-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
+.date-idea-content h3 { margin: 0; font: 400 clamp(24px, 1.8vw, 30px)/1.12 Georgia, serif; letter-spacing: -.5px; }
+.date-idea-content p {
+  max-width: 32ch;
+  margin: 12px 0 0;
+  color: var(--muted-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.date-idea-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
 .date-idea-meta span {
   padding: 6px 10px;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
@@ -870,7 +1001,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: var(--muted-text);
   font-size: 10px;
 }
-.date-idea-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.date-idea-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: auto;
+}
 .date-idea-refresh, .date-idea-explore, .quote-refresh {
   display: inline-flex;
   min-height: 36px;
@@ -1451,9 +1588,9 @@ footer {
   gap: 8px;
   min-height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
   border-radius: 13px;
-  background: color-mix(in srgb, var(--card) 86%, transparent);
+  background: color-mix(in srgb, var(--primary) 9%, var(--card));
   color: var(--muted-text);
   font-size: 12px;
   font-weight: 600;
@@ -1467,8 +1604,10 @@ footer {
   color: var(--foreground);
   font: inherit;
   cursor: pointer;
+  appearance: none;
+  padding-right: 4px;
 }
-.random-date-location option { color: #242126; }
+.random-date-location option { color: var(--foreground); }
 .random-date-ideas {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2188,8 +2327,13 @@ footer {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
   }
-  .music-nav-btn, .music-playlist-btn { display: none; }
+  .music-nav-btn { display: none; }
+  .music-playlist-btn { display: grid; width: 30px; height: 30px; }
   .music-toggle { width: 34px; height: 34px; }
+  .music-playlist-dropdown {
+    right: 0;
+    width: min(260px, calc(100vw - 32px));
+  }
   .theme-picker { padding-right: 7px; }
   .language-picker { padding-right: 7px; }
   .language-picker-trigger { min-height: 34px; width: 36px; padding: 0; }
@@ -2732,6 +2876,9 @@ footer {
   .lower-grid { grid-template-columns: 1fr; gap: 12px; padding-top: 16px; }
   .upcoming-card { min-height: 190px; }
   .date-idea-card { grid-template-columns: 1fr; min-height: 0; padding: 0; }
+  .location-map-card { min-height: 300px; }
+  .location-map-card .date-map-pane,
+  .location-map-card .date-map-instance { min-height: 300px; }
   .date-idea-photo { min-height: 220px; }
   .date-idea-details { min-height: 0; padding: 21px; }
   .date-idea-content { flex: none; margin: 22px 0; }

@@ -14,5 +14,25 @@
       "id": "saigon-river-walk",
       "location": "ho-chi-minh"
     }
-  ]
+  ],
+  "map": {
+    "center": [15.8700, 108.3250],
+    "zoom": 5.8,
+    "locations": [
+      {
+        "id": "trong",
+        "name": "Trọng",
+        "gender": "male",
+        "city": "Ho Chi Minh City",
+        "coords": [10.847674696232753, 106.84420178607076]
+      },
+      {
+        "id": "thanh",
+        "name": "Thanh",
+        "gender": "female",
+        "city": "Hanoi",
+        "coords": [21.03394643963963, 105.8077094597472]
+      }
+    ]
+  }
 }
