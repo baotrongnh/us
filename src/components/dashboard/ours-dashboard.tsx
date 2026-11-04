@@ -226,10 +226,15 @@ const LocationMapBody = dynamic(
 function LocationMapCard() {
   const { t } = useLanguage();
   const markerData = mapLocations;
+  const cartoKey = process.env.NEXT_PUBLIC_CARTO_KEY;
 
   // CartoDB Voyager displays crisp national borders, city/province names in Vietnamese,
-  // and high-resolution street tiles without requiring an API key.
-  const tileUrl = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  // and high-resolution street tiles. Supports optional ?key= if NEXT_PUBLIC_CARTO_KEY is set.
+  const tileUrl =
+    process.env.NEXT_PUBLIC_MAP_TILE_URL ||
+    (cartoKey
+      ? `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(cartoKey)}`
+      : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png");
 
   return (
     <article className="location-map-card">
