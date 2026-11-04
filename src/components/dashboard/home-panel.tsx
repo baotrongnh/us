@@ -231,7 +231,7 @@ export function HomePanel({
       </section>
 
       <section className="feature-grid" aria-label={t("relationshipOverview")}>
-        <article className="together-card">
+        <article className="together-card" data-tour="days-counter">
           <p className="eyebrow">{t("ourLittleNumber")}</p>
           <div className="count-number">
             <AnimatedCount
@@ -272,7 +272,7 @@ export function HomePanel({
           <p className="tiny-copy">{t("counterNote")}</p>
         </article>
 
-        <article className="upcoming-card">
+        <article className="upcoming-card" data-tour="anniversary">
           <div className="upcoming-title">
             <div>
               <p className="eyebrow">{t("comingUp")}</p>
@@ -325,6 +325,7 @@ export function HomePanel({
           <button
             type="button"
             className="upcoming-view-all"
+            data-tour="view-events"
             onClick={() => setIsUpcomingModalOpen(true)}
           >
             {t("viewAllEvents")} <ChevronRight size={14} />

@@ -24,6 +24,7 @@ import { HomePanel } from "@/components/dashboard/home-panel";
 import { LettersPanel } from "@/components/dashboard/letters-panel";
 import { RandomDatePanel } from "@/components/dashboard/random-date-panel";
 import { ComingSoonPanel } from "@/components/dashboard/coming-soon-panel";
+import { FeatureTour } from "@/components/dashboard/feature-tour";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import siteConfig from "@/data/site-config.json";
 import { LanguageProvider, useLanguage, type TranslationKey } from "@/components/dashboard/language-context";
@@ -117,7 +118,7 @@ function ThemePicker({
   }, [isOpen]);
 
   return (
-    <div className={`theme-picker ${isOpen ? "open" : ""}`} ref={pickerRef}>
+    <div className={`theme-picker ${isOpen ? "open" : ""}`} ref={pickerRef} data-tour="theme">
       <button
         type="button"
         className="theme-picker-trigger"
@@ -250,6 +251,7 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
   });
   const [navOpen, setNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<Section>("home");
+  const [isTourReady, setIsTourReady] = useState(!siteConfig.welcomeModal.enabled);
   const [counterAnimationActive, setCounterAnimationActive] = useState(!siteConfig.welcomeModal.enabled);
   const [notice, setNotice] = useState("");
   const [isMemoryDialogOpen, setIsMemoryDialogOpen] = useState(false);
@@ -264,7 +266,10 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
     title: string;
   } | null>(null);
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
-  const dismissWelcome = useCallback(() => setCounterAnimationActive(true), []);
+  const dismissWelcome = useCallback(() => {
+    setCounterAnimationActive(true);
+    setIsTourReady(true);
+  }, []);
   const finishCounterAnimation = useCallback(() => setCounterAnimationActive(false), []);
 
   useEffect(() => {
@@ -338,16 +343,21 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
     showToast(t("memorySavedUi"));
   };
 
-  const navigate = (section: Section) => {
+  const navigate = useCallback((section: Section) => {
     setActiveSection(section);
     setNavOpen(false);
-  };
+  }, []);
 
   return (
     <MusicProvider>
     <div className="app-shell" data-theme={theme}>
       {/* Welcome countdown modal */}
       <WelcomeCountdown onDismiss={dismissWelcome} />
+      <FeatureTour
+        ready={isTourReady}
+        activeSection={activeSection}
+        onNavigate={navigate}
+      />
 
       {isNotificationsOpen && (
         <div
@@ -414,6 +424,7 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
               <button
                 type="button"
                 className="theme-picker-trigger notification-trigger"
+                data-tour="notifications"
                 aria-label={t("notifications")}
                 aria-haspopup="dialog"
                 aria-expanded={isNotificationsOpen}

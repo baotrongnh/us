@@ -81,6 +81,7 @@ export function MusicPlayer() {
         role="status"
         aria-label={t("loadingMusic")}
         aria-busy="true"
+        data-tour="music"
       >
         <LoaderCircle size={18} aria-hidden="true" />
       </div>
@@ -88,7 +89,7 @@ export function MusicPlayer() {
   }
 
   return (
-    <div className="music-player">
+    <div className="music-player" data-tour="music">
       {/* Prev */}
       {playlist.length > 1 && (
         <button

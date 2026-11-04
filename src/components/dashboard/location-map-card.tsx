@@ -120,7 +120,7 @@ export function LocationMapCard({ locations }: { locations: MapLocation[] }) {
       : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
 
   return (
-    <article className="location-map-card">
+    <article className="location-map-card" data-tour="map">
       <div
         className="date-map-pane"
         aria-label={t("whereWeAre")}

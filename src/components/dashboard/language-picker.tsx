@@ -78,7 +78,7 @@ export function LanguagePicker() {
   }, [isOpen]);
 
   return (
-    <div className={`theme-picker language-picker ${isOpen ? "open" : ""}`} ref={pickerRef}>
+    <div className={`theme-picker language-picker ${isOpen ? "open" : ""}`} ref={pickerRef} data-tour="language">
       <button
         type="button"
         className="theme-picker-trigger language-picker-trigger"

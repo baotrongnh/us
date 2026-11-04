@@ -325,6 +325,7 @@ export function RandomDatePanel() {
           <button
             type="button"
             className="theme-picker-trigger random-date-location-trigger"
+            data-tour="date-location"
             ref={locationTriggerRef}
             aria-label={`${t("location")}: ${t(location === "hanoi" ? "locationHanoi" : "locationHoChiMinh")}`}
             aria-haspopup="listbox"
@@ -372,7 +373,7 @@ export function RandomDatePanel() {
         </div>
       )}
 
-      <div className="random-date-randomizer">
+      <div className="random-date-randomizer" data-tour="random-date">
         <p aria-live="polite">
           {isSpinning ? t("spinningForDate") : t("randomDatePrompt")}
         </p>
