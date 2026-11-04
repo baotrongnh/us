@@ -15,12 +15,7 @@ export async function GET() {
       );
     }
 
-    // Try reading real letters.json first, fallback to letters.example.json
-    let filePath = path.join(process.cwd(), "src/data/letters.json");
-    if (!fs.existsSync(filePath)) {
-      filePath = path.join(process.cwd(), "src/data/letters.example.json");
-    }
-
+    const filePath = path.join(process.cwd(), "src/data/letters.json");
     if (!fs.existsSync(filePath)) {
       return NextResponse.json({ letters: [] });
     }

@@ -30,6 +30,7 @@ type MusicContextValue = {
   currentIndex: number;
   userInteracted: boolean;
   notifyInteraction: () => void;
+  isLoading: boolean;
   musicError: string | null;
 };
 
@@ -49,6 +50,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [playlist, setPlaylist] = useState<Track[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [userInteracted, setUserInteracted] = useState(false);
   const [musicError, setMusicError] = useState<string | null>(null);
   const pendingPlay = useRef(false);
@@ -63,6 +65,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         return response.json();
       })
       .then((data: { tracks: Track[] }) => {
+        setIsLoading(data.tracks.length > 0);
         const shuffledTracks = [...data.tracks];
         for (let i = shuffledTracks.length - 1; i > 0; i--) {
           const randomIndex = Math.floor(Math.random() * (i + 1));
@@ -75,6 +78,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         setPlaylist(shuffledTracks);
       })
       .catch((error: unknown) => {
+        setIsLoading(false);
         setMusicError(
           error instanceof Error ? error.message : "Could not load background music."
         );
@@ -90,9 +94,18 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
     audio.addEventListener("play", () => {
       autoplayPending.current = false;
+      setIsLoading(false);
       setIsPlaying(true);
     });
     audio.addEventListener("pause", () => setIsPlaying(false));
+    audio.addEventListener("loadstart", () => setIsLoading(true));
+    audio.addEventListener("canplay", () => setIsLoading(false));
+    audio.addEventListener("playing", () => setIsLoading(false));
+    audio.addEventListener("waiting", () => setIsLoading(true));
+    audio.addEventListener("error", () => {
+      setIsLoading(false);
+      setMusicError("Could not load this audio file.");
+    });
     audio.addEventListener("ended", () => {
       const currentPlaylist = playlistRef.current;
       if (currentPlaylist.length <= 1) {
@@ -117,6 +130,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     if (!audio || playlist.length === 0) return;
     const track = playlist[currentIndex];
     if (audio.src !== window.location.origin + track.src) {
+      setIsLoading(true);
       const wasPlaying = !audio.paused;
       audio.src = track.src;
       audio.load();
@@ -132,6 +146,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       }).catch((error: unknown) => {
         const wasBlocked = error instanceof DOMException && error.name === "NotAllowedError";
         if (wasBlocked) return;
+        setIsLoading(false);
         autoplayPending.current = false;
         setMusicError("Could not play this audio file.");
       });
@@ -248,6 +263,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         currentIndex,
         userInteracted,
         notifyInteraction,
+        isLoading,
         musicError,
       }}
     >

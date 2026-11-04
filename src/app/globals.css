@@ -289,6 +289,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
   margin-left: 0;
   position: relative;
 }
+.music-player-loading {
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  color: var(--primary);
+}
+.music-player-loading svg { animation: spin 1s linear infinite; }
 .music-nav-btn {
   display: grid;
   flex: none;
@@ -347,13 +354,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   top: calc(100% + 10px);
   left: 0;
   width: 270px;
-  padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, white);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  box-shadow: 0 16px 42px color-mix(in srgb, var(--foreground) 16%, transparent);
-  backdrop-filter: blur(24px) saturate(1.45);
-  -webkit-backdrop-filter: blur(24px) saturate(1.45);
   z-index: 1000;
   overflow: hidden;
   animation: card-arrive .18s ease-out both;
@@ -859,6 +859,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
   min-height: 360px;
   background: linear-gradient(180deg, #d4e4f7 0%, #eaf5ff 100%);
 }
+.date-map-loading {
+  position: absolute;
+  z-index: 650;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  color: var(--muted-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  backdrop-filter: blur(2px);
+}
+.date-map-loading svg { color: var(--primary); }
+.date-map-loading:not(.has-error) svg { animation: spin 1s linear infinite; }
+.date-map-loading.has-error { color: var(--foreground); }
 .location-map-card .leaflet-control-zoom {
   overflow: hidden;
   border: 1px solid var(--border);
@@ -1637,31 +1655,29 @@ footer {
   margin-bottom: 6px;
 }
 .random-date-location {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  flex: none;
+  padding: 0;
+  border: 0;
+}
+.random-date-location-trigger {
   min-height: 40px;
+  gap: 8px;
   padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
   border-radius: 13px;
-  background: color-mix(in srgb, var(--primary) 9%, var(--card));
-  color: var(--muted-text);
   font-size: 12px;
   font-weight: 600;
 }
-.random-date-location > svg { color: var(--primary); }
-.random-date-location select {
-  max-width: 190px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--foreground);
-  font: inherit;
-  cursor: pointer;
-  appearance: none;
-  padding-right: 4px;
+.random-date-location-trigger > svg:first-child { flex: none; color: var(--primary); }
+.random-date-location-trigger > span { color: var(--muted-text); }
+.random-date-location-trigger > strong { color: var(--foreground); font-size: inherit; }
+.random-date-location-menu {
+  right: 0;
+  width: min(230px, calc(100vw - 32px));
+  z-index: 70;
 }
-.random-date-location option { color: var(--foreground); }
 .random-date-ideas {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1732,6 +1748,7 @@ footer {
 }
 .random-date-card.spinning { opacity: 0; transform: translateY(6px); }
 .random-date-photo-frame {
+  position: relative;
   width: 250px;
   min-height: 220px;
   flex: 0 0 250px;
@@ -1743,6 +1760,7 @@ footer {
   background-size: cover;
   background-repeat: no-repeat;
 }
+.random-date-photo-image { object-fit: cover; }
 .random-date-photo-placeholder {
   display: grid;
   min-height: 220px;
@@ -2798,8 +2816,24 @@ footer {
   box-shadow: 0 14px 30px color-mix(in srgb, var(--primary) 38%, transparent), inset 0 1px 0 rgba(255,255,255,.5);
 }
 .memory-dialog {
-  width: min(100%, 460px);
-  padding: 30px;
+  width: min(100%, 400px);
+  padding: 24px;
+}
+.memory-dialog .dialog-heading {
+  margin-bottom: 18px;
+}
+.memory-dialog .dialog-heading h2 {
+  font-size: 24px;
+}
+.memory-dialog label {
+  margin-top: 13px;
+}
+.memory-dialog input {
+  height: 40px;
+  margin-top: 6px;
+}
+.memory-dialog .dialog-actions {
+  margin-top: 20px;
 }
 .memory-dialog input {
   background: color-mix(in srgb, var(--background) 72%, transparent);
@@ -2959,7 +2993,7 @@ footer {
   .countdown-unit { min-width: 0; flex: 1; padding: 12px 5px 10px; border-radius: 15px; }
   .countdown-number { font-size: clamp(30px, 9vw, 40px); }
   .countdown-sep { font-size: 25px; padding-bottom: 14px; }
-  .memory-dialog { padding: 25px 21px; }
+  .memory-dialog { padding: 22px 18px; }
   .ui-modal-backdrop { padding: 16px; }
   .ui-modal-lightbox { padding: 10px; }
   .ui-modal-lightbox.lightbox-content { max-height: calc(100dvh - 32px); }

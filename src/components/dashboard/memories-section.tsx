@@ -4,15 +4,7 @@ import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ImageIcon, MapPin, Plus } from "lucide-react";
 import memoriesData from "@/data/memories.json";
 import { useLanguage } from "@/components/dashboard/language-context";
-
-type RecentItem = {
-  kind: "memory" | "date" | "letter";
-  label: string;
-  dateLabel: string;
-  title: string;
-  meta: string;
-  image?: string;
-};
+import type { RecentItem } from "@/lib/types";
 
 function MemoryCard({
   item,
@@ -114,7 +106,7 @@ export function MemoriesSection({
         <div className="recent-grid" ref={carouselRef} onScroll={onScroll}>
           {recentItems.map((item, idx) => (
             <MemoryCard
-              key={`${item.kind}-${item.title}-${idx}`}
+              key={`${item.title}-${idx}`}
               item={item}
               onOpenImage={onOpenImage}
               viewPhotoLabel={t("viewPhoto")}

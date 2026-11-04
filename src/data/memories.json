@@ -1,44 +1,33 @@
 {
   "featuredMemory": {
-    "dateLabel": "20.09.26",
-    "captionLines": ["Some moments deserve", "a place to stay."]
+    "dateLabel": "20.09.26"
   },
   "recentItems": [
     {
-      "kind": "memory",
-      "label": "MEMORY",
       "dateLabel": "20 SEP",
       "title": "Confession Day",
       "meta": "Ho Chi Minh",
       "image": "/images/memories/confession-day.jpg"
     },
     {
-      "kind": "memory",
-      "label": "MEMORY",
       "dateLabel": "26 SEP",
       "title": "Locket Memory",
       "meta": "Ho Chi Minh",
       "image": "/images/memories/locket-memory.jpg"
     },
     {
-      "kind": "memory",
-      "label": "MEMORY",
       "dateLabel": "19 Aug",
       "title": "First Date.",
       "meta": "Ho Chi Minh",
       "image": "/images/memories/first-date.jpg"
     },
     {
-      "kind": "memory",
-      "label": "MEMORY",
       "dateLabel": "N/A",
       "title": "Flower.",
       "meta": "Ho Chi Minh",
       "image": "/images/memories/bouquet.jpg"
     },
     {
-      "kind": "memory",
-      "label": "MEMORY",
       "dateLabel": "N/A",
       "title": "Bưu Điện",
       "meta": "Ho Chi Minh",

@@ -27,11 +27,10 @@ interface Letter {
 
 function cleanVietnameseText(str?: string): string {
   if (!str) return "";
-  let text = str.normalize("NFC");
-  // Remove space between vowel/consonant and combining accent mark
-  text = text.replace(/([a-zA-ZăâêôơưĂÂÊÔƠƯ])\s+([\u0300\u0301\u0303\u0309\u0323])/g, "$1$2");
-  text = text.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
-  return text.normalize("NFC");
+  return str
+    .normalize("NFD")
+    .replace(/([a-zA-ZăâêôơưĂÂÊÔƠƯ])\s+([\u0300\u0301\u0303\u0309\u0323])/g, "$1$2")
+    .normalize("NFC");
 }
 
 function getLetterImages(letter: Letter): string[] {

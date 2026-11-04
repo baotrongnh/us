@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  LoaderCircle,
   ListMusic,
   Pause,
   Play,
@@ -23,6 +24,7 @@ export function MusicPlayer() {
     playPrev,
     selectTrack,
     currentIndex,
+    isLoading,
     musicError,
   } = useMusicPlayer();
 
@@ -72,8 +74,21 @@ export function MusicPlayer() {
     return () => observer.disconnect();
   }, [songTitle]);
 
+  if (isLoading) {
+    return (
+      <div
+        className="music-player music-player-loading"
+        role="status"
+        aria-label={t("loadingMusic")}
+        aria-busy="true"
+      >
+        <LoaderCircle size={18} aria-hidden="true" />
+      </div>
+    );
+  }
+
   return (
-    <div className="music-player" style={{ position: "relative" }}>
+    <div className="music-player">
       {/* Prev */}
       {playlist.length > 1 && (
         <button
@@ -143,6 +158,8 @@ export function MusicPlayer() {
       {playlist.length > 1 && (
         <button
           className="music-playlist-btn"
+          aria-haspopup="listbox"
+          aria-expanded={showPlaylist}
           onClick={() => setShowPlaylist((v) => !v)}
           aria-label={t("togglePlaylist")}
           title={t("playlist")}
@@ -153,7 +170,10 @@ export function MusicPlayer() {
 
       {/* Playlist dropdown */}
       {showPlaylist && (
-        <div className="music-playlist-dropdown" ref={dropdownRef}>
+        <div
+          className="music-playlist-dropdown theme-picker-menu"
+          ref={dropdownRef}
+        >
           <div className="music-playlist-header">
             <span>{t("playlist")}</span>
             <button
@@ -164,28 +184,30 @@ export function MusicPlayer() {
               <X size={14} />
             </button>
           </div>
-          <ul className="music-playlist-list">
+          <div className="music-playlist-list" role="listbox" aria-label={t("playlist")}>
             {playlist.map((track, i) => (
-              <li key={track.src}>
-                <button
-                  className={`music-playlist-item ${i === currentIndex ? "active" : ""}`}
-                  onClick={() => {
-                    selectTrack(i);
-                    setShowPlaylist(false);
-                  }}
-                >
-                  <span className="playlist-play-icon">
-                    {i === currentIndex && isPlaying ? (
-                      <Pause size={11} fill="currentColor" />
-                    ) : (
-                      <Play size={11} fill="currentColor" />
-                    )}
-                  </span>
-                  <span className="playlist-track-name">{track.title}</span>
-                </button>
-              </li>
+              <button
+                type="button"
+                key={track.src}
+                className={`music-playlist-item theme-picker-option ${i === currentIndex ? "active selected" : ""}`}
+                role="option"
+                aria-selected={i === currentIndex}
+                onClick={() => {
+                  selectTrack(i);
+                  setShowPlaylist(false);
+                }}
+              >
+                <span className="playlist-play-icon">
+                  {i === currentIndex && isPlaying ? (
+                    <Pause size={11} fill="currentColor" />
+                  ) : (
+                    <Play size={11} fill="currentColor" />
+                  )}
+                </span>
+                <span className="playlist-track-name">{track.title}</span>
+              </button>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
