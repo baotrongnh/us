@@ -10,7 +10,7 @@
       "dateLabel": "20 SEP",
       "title": "Confession Day",
       "meta": "Ho Chi Minh",
-      "image": "/flower_2.jpg"
+      "image": "/images/memories/confession-day.jpg"
     },
     {
       "kind": "memory",
@@ -18,7 +18,7 @@
       "dateLabel": "26 SEP",
       "title": "Locket Memory",
       "meta": "Ho Chi Minh",
-      "image": "/mem2.jpg"
+      "image": "/images/memories/locket-memory.jpg"
     },
     {
       "kind": "memory",
@@ -26,7 +26,7 @@
       "dateLabel": "19 Aug",
       "title": "First Date.",
       "meta": "Ho Chi Minh",
-      "image": "/firstdate.jpg"
+      "image": "/images/memories/first-date.jpg"
     },
     {
       "kind": "memory",
@@ -34,7 +34,7 @@
       "dateLabel": "N/A",
       "title": "Flower.",
       "meta": "Ho Chi Minh",
-      "image": "/flower.jpg"
+      "image": "/images/memories/bouquet.jpg"
     },
     {
       "kind": "memory",
@@ -42,7 +42,7 @@
       "dateLabel": "N/A",
       "title": "Bưu Điện",
       "meta": "Ho Chi Minh",
-      "image": "/buudien.jpg"
+      "image": "/images/memories/central-post-office.jpg"
     }
   ]
 }

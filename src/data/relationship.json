@@ -15,7 +15,8 @@
         { "label": "Home",        "icon": "home" },
         { "label": "Memories",    "icon": "memories" },
         { "label": "Random date", "icon": "randomDate" },
-        { "label": "Letters",     "icon": "letters" }
+        { "label": "Letters",     "icon": "letters" },
+        { "label": "Whispers",     "icon": "whispers" }
       ]
     }
   ],
@@ -57,6 +58,6 @@
     "source": "/audio/Le%CC%82%CC%83%20%C4%90u%CC%9Bo%CC%9B%CC%80ng%20(Kai%20%C4%90inh)%20_%20Alice%20Piano%20cover%20x%20Synthesia%20tutorial%20-%20(64%20Kbps).mp3"
   },
   "images": {
-    "featured": "/hero.jpg"
+    "featured": "/images/relationship/featured-memory.jpg"
   }
 }

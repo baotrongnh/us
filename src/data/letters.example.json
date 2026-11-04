@@ -8,7 +8,7 @@
       "to": "Her Name",
       "date": "2026-01-01",
       "location": "Hà Nội",
-      "images": ["/letter-sample.jpg"],
+      "images": ["/images/letters/letter-from-trong.jpg"],
       "fullText": "Đây là lá thư mẫu. Hãy thay thế nội dung này trong file src/data/letters.json bằng lá thư của bạn!\n\n— Tên của bạn"
     }
   ]

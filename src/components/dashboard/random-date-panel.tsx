@@ -1,144 +1,202 @@
 "use client";
 
-import { useState } from "react";
-import { Wrench, RefreshCw, Sparkles, AlertCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Calendar, Clock3, MapPin, Shuffle } from "lucide-react";
 import randomDatesData from "@/data/random-dates.json";
+import { useLanguage, type TranslationKey } from "@/components/dashboard/language-context";
 
-type Idea = (typeof randomDatesData.ideas)[number];
-
-const moodColors: Record<string, string> = {
-  cozy: "#f3a6b8",
-  romantic: "#e88fa5",
-  fun: "#91a68e",
-  calm: "#7baff5",
-  creative: "#b8a0e0",
+export const randomDateIdeaTranslations: Record<string, {
+  title: TranslationKey;
+  description: TranslationKey;
+  duration: TranslationKey;
+  budget: TranslationKey;
+}> = {
+  cooking: {
+    title: "cookingTogether",
+    description: "cookingDescription",
+    duration: "cookingDuration",
+    budget: "cookingBudget",
+  },
+  "west-lake-cycling": {
+    title: "westLakeCycling",
+    description: "westLakeDescription",
+    duration: "hours",
+    budget: "bikeRental",
+  },
+  "saigon-river-walk": {
+    title: "saigonRiverWalk",
+    description: "saigonRiverWalkDescription",
+    duration: "saigonWalkDuration",
+    budget: "freeActivity",
+  },
 };
 
-const moodLabels: Record<string, string> = {
-  cozy: "Cozy",
-  romantic: "Romantic",
-  fun: "Fun",
-  calm: "Calm",
-  creative: "Creative",
-};
+const locations = ["hanoi", "ho-chi-minh"] as const;
+type DateLocation = (typeof locations)[number];
 
 export function RandomDatePanel() {
-  const [current, setCurrent] = useState<Idea>(() => {
-    const idx = Math.floor(Math.random() * randomDatesData.ideas.length);
-    return randomDatesData.ideas[idx];
-  });
-  const [spinning, setSpinning] = useState(false);
-  const [devNotice, setDevNotice] = useState<string | null>(null);
+  const { t } = useLanguage();
+  const [notice, setNotice] = useState<string | null>(null);
+  const [location, setLocation] = useState<DateLocation>("hanoi");
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const spinTimerRef = useRef<number | null>(null);
 
-  const showDevMessage = (msg = "This feature is currently under development 🛠️") => {
-    setDevNotice(msg);
-    setTimeout(() => setDevNotice(null), 3000);
+  const showNotice = () => {
+    setNotice(t("savingComingSoon"));
+    window.setTimeout(() => setNotice(null), 3000);
+  };
+  const ideas = randomDatesData.ideas.filter(
+    (idea) => idea.location === "all" || idea.location === location
+  );
+  const selectedIdea = ideas.find((idea) => idea.id === selectedIdeaId) ?? ideas[0];
+
+  useEffect(() => {
+    return () => {
+      if (spinTimerRef.current) window.clearTimeout(spinTimerRef.current);
+    };
+  }, []);
+
+  const spinForIdea = () => {
+    if (isSpinning || ideas.length < 2) return;
+
+    setIsSpinning(true);
+    const currentIndex = Math.max(0, ideas.findIndex((idea) => idea.id === selectedIdea?.id));
+    const destinationOffset = Math.floor(Math.random() * ideas.length);
+    const totalSteps = ideas.length * 5 + destinationOffset;
+    let remainingSteps = totalSteps;
+    let step = 0;
+
+    const advance = () => {
+      step += 1;
+      const nextIndex = (currentIndex + step) % ideas.length;
+      setSelectedIdeaId(ideas[nextIndex].id);
+      remainingSteps -= 1;
+
+      if (remainingSteps === 0) {
+        setIsSpinning(false);
+        spinTimerRef.current = null;
+        return;
+      }
+
+      const progress = step / totalSteps;
+      const delay = 90 + Math.round(800 * progress * progress);
+      spinTimerRef.current = window.setTimeout(advance, delay);
+    };
+
+    spinTimerRef.current = window.setTimeout(advance, 65);
   };
 
-  const pickRandom = () => {
-    setSpinning(true);
-    showDevMessage("Random date generator is under development 🛠️");
-    const others = randomDatesData.ideas.filter((i) => i.id !== current.id);
-    const next = others[Math.floor(Math.random() * others.length)];
-    setTimeout(() => {
-      setCurrent(next);
-      setSpinning(false);
-    }, 400);
+  const selectLocation = (nextLocation: DateLocation) => {
+    if (spinTimerRef.current) window.clearTimeout(spinTimerRef.current);
+    spinTimerRef.current = null;
+    setIsSpinning(false);
+    setLocation(nextLocation);
+    setSelectedIdeaId(null);
   };
-
-  const selectIdea = (idea: Idea) => {
-    setSpinning(true);
-    showDevMessage(`"${idea.title}" feature is under development 🛠️`);
-    setTimeout(() => {
-      setCurrent(idea);
-      setSpinning(false);
-    }, 250);
-  };
-
-  const moodColor = moodColors[current.mood] ?? "var(--primary)";
 
   return (
     <section className="section-block random-date-section">
       <div className="section-header">
         <div>
-          <p className="eyebrow">Not sure where to go?</p>
-          <h2>Random Date</h2>
+          <p className="eyebrow">{t("aLittleFreshAir")}</p>
+          <h2>{t("randomDate")}</h2>
         </div>
-        <div className="random-date-dev-badge">
-          <Wrench size={14} />
-          <span>Under Development</span>
-        </div>
+        <label className="random-date-location">
+          <MapPin size={15} aria-hidden="true" />
+          <span>{t("location")}</span>
+          <select
+            value={location}
+            onChange={(event) => selectLocation(
+              event.target.value === "ho-chi-minh" ? "ho-chi-minh" : "hanoi"
+            )}
+            aria-label={t("location")}
+          >
+            {locations.map((item) => (
+              <option key={item} value={item}>
+                {t(item === "hanoi" ? "locationHanoi" : "locationHoChiMinh")}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      {devNotice && (
+      {notice && (
         <div role="status" className="random-date-toast">
-          <AlertCircle size={16} />
-          <span>{devNotice}</span>
+          <span>{notice}</span>
         </div>
       )}
 
-      <div
-        className={`random-date-card ${spinning ? "spinning" : ""}`}
-        onClick={() => showDevMessage(`"${current.title}" feature is under development 🛠️`)}
-        title="Click to view — Feature under development"
-        style={{ cursor: "pointer" }}
-      >
-        <div
-          className="random-date-emoji"
-          style={{ background: `${moodColor}22`, color: moodColor }}
+      <div className="random-date-randomizer">
+        <p aria-live="polite">
+          {isSpinning ? t("spinningForDate") : t("randomDatePrompt")}
+        </p>
+        <button
+          type="button"
+          className={`random-date-spin-btn ${isSpinning ? "is-spinning" : ""}`}
+          onClick={spinForIdea}
+          disabled={isSpinning || ideas.length < 2}
         >
-          {current.emoji}
-        </div>
-
-        <div className="random-date-body">
-          <div className="random-date-mood-wrap">
-            <span className="random-date-mood" style={{ color: moodColor }}>
-              {moodLabels[current.mood] ?? current.mood}
-            </span>
-            <span className="random-date-tag-dev">Feature under development</span>
-          </div>
-
-          <h3 className="random-date-title">{current.title}</h3>
-          <p className="random-date-desc">{current.description}</p>
-
-          <div className="random-date-tags">
-            <span className="random-date-tag">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-              </svg>
-              {current.duration}
-            </span>
-            <span className="random-date-tag">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
-              {current.budget}
-            </span>
-          </div>
-        </div>
+          <Shuffle size={16} aria-hidden="true" />
+          {t(isSpinning ? "spinning" : "randomizeDate")}
+        </button>
       </div>
 
-      <button
-        className="random-date-spin-btn"
-        onClick={pickRandom}
-        disabled={spinning}
-      >
-        <RefreshCw size={16} className={spinning ? "spin-anim" : ""} />
-        Pick another
-      </button>
+      <div className="random-date-ideas">
+        {selectedIdea && (() => {
+          const idea = selectedIdea;
+          const copy = randomDateIdeaTranslations[idea.id];
+          if (!copy) return null;
+          const isShared = idea.location === "all";
+          const title = t(copy.title);
 
-      <div className="random-date-all-title">All ideas</div>
-      <div className="random-date-all-grid">
-        {randomDatesData.ideas.map((idea) => (
-          <button
-            key={idea.id}
-            className={`random-date-all-item ${idea.id === current.id ? "active" : ""}`}
-            onClick={() => selectIdea(idea)}
-          >
-            <span className="random-date-all-emoji">{idea.emoji}</span>
-            <span>{idea.title}</span>
-          </button>
-        ))}
+          return (
+            <article
+              className={`random-date-card ${isSpinning ? "is-spinning" : ""}`}
+              key={idea.id}
+              aria-busy={isSpinning}
+            >
+              <div
+                className={`random-date-photo-frame ${idea.image ? "" : "without-image"}`}
+                role="img"
+                aria-label={title}
+                style={idea.image ? { backgroundImage: `url("${idea.image}")` } : undefined}
+              >
+                {!idea.image && (
+                  <div className="random-date-photo-placeholder">
+                    <MapPin size={24} aria-hidden="true" />
+                    <span>{t("locationHoChiMinh")}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="random-date-body">
+                <div className="random-date-mood-wrap">
+                  <span className="random-date-mood" style={{ color: "var(--primary)" }}>
+                    {t(isShared ? "sharedActivity" : "locationActivity")}
+                    {!isShared && ` · ${t(location === "hanoi" ? "locationHanoi" : "locationHoChiMinh")}`}
+                  </span>
+                </div>
+
+                <h3 className="random-date-title">{title}</h3>
+                <p className="random-date-desc">{t(copy.description)}</p>
+
+                <div className="random-date-tags">
+                  <span className="random-date-tag">
+                    <Clock3 size={12} aria-hidden="true" />
+                    {t(copy.duration)}
+                  </span>
+                  <span className="random-date-tag">{t(copy.budget)}</span>
+                </div>
+
+                <button className="random-date-save-btn" onClick={showNotice}>
+                  <Calendar size={14} />
+                  {t("saveDateIdea")}
+                </button>
+              </div>
+            </article>
+          );
+        })()}
       </div>
     </section>
   );

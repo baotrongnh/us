@@ -12,7 +12,7 @@ import {
   Maximize2,
   X,
 } from "lucide-react";
-import { format } from "date-fns";
+import { useLanguage } from "@/components/dashboard/language-context";
 interface Letter {
   id: string;
   title: string;
@@ -71,6 +71,7 @@ function getLetterPreview(letter: Letter) {
 // ── Section Password Gate ────────────────────────────────────────────────────
 
 function SectionPasswordGate({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useLanguage();
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [shaking, setShaking] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -100,7 +101,7 @@ function SectionPasswordGate({ onSuccess }: { onSuccess: () => void }) {
         onSuccess();
       } else {
         setShaking(true);
-        setErrorMsg(data.error || "Incorrect PIN code. Try again.");
+        setErrorMsg(data.error || t("incorrectPin"));
         setTimeout(() => {
           setDigits(["", "", "", "", "", ""]);
           setShaking(false);
@@ -109,7 +110,7 @@ function SectionPasswordGate({ onSuccess }: { onSuccess: () => void }) {
       }
     } catch {
       setShaking(true);
-      setErrorMsg("Network error. Please try again.");
+      setErrorMsg(t("networkError"));
     } finally {
       setIsVerifying(false);
     }
@@ -136,9 +137,9 @@ function SectionPasswordGate({ onSuccess }: { onSuccess: () => void }) {
         <div className="letters-gate-icon" aria-hidden="true">
           <Lock size={26} />
         </div>
-        <h2 className="letters-gate-title">Letters</h2>
+        <h2 className="letters-gate-title">{t("letters")}</h2>
         <p className="letters-gate-sub">
-          Enter your 6-digit code to read your letters.
+          {t("enterSixDigitCode")}
         </p>
         <div className={`pin-row ${shaking ? "pin-shake" : ""}`}>
           {digits.map((d, i) => (
@@ -154,13 +155,13 @@ function SectionPasswordGate({ onSuccess }: { onSuccess: () => void }) {
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               className={`pin-input ${d ? "pin-filled" : ""}`}
-              aria-label={`Digit ${i + 1}`}
+              aria-label={`${i + 1}`}
             />
           ))}
         </div>
         {errorMsg && <p className="pin-error-msg">{errorMsg}</p>}
         <p className="letters-gate-hint">
-          <Lock size={11} /> This section is private — only for the two of you.
+          <Lock size={11} /> {t("privateOnlyUs")}
         </p>
       </div>
     </div>
@@ -176,6 +177,7 @@ function LetterDetail({
   letter: Letter;
   onClose: () => void;
 }) {
+  const { t, locale } = useLanguage();
   const images = getLetterImages(letter);
   const [activeImgIndex, setActiveImgIndex] = useState(0);
   const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
@@ -207,14 +209,14 @@ function LetterDetail({
   return (
     <>
       <div
-        className="letter-detail-backdrop"
+        className="ui-modal-backdrop letter-detail-backdrop"
         onMouseDown={onClose}
         role="dialog"
         aria-modal="true"
         aria-label={titleClean}
       >
-        <div className="letter-detail-modal" onMouseDown={(e) => e.stopPropagation()}>
-          <button className="lightbox-close" onClick={onClose} aria-label="Close">
+        <div className="ui-modal-surface letter-detail-modal" onMouseDown={(e) => e.stopPropagation()}>
+          <button className="ui-modal-close lightbox-close" onClick={onClose} aria-label={t("close")}>
             <X size={19} />
           </button>
 
@@ -223,7 +225,7 @@ function LetterDetail({
               <div
                 className="letter-detail-image-container"
                 onClick={openFullscreen}
-                title="Bấm để xem ảnh phóng to đầy đủ"
+                title={t("viewPhoto")}
               >
                 <img
                   src={images[activeImgIndex]}
@@ -235,9 +237,9 @@ function LetterDetail({
                   type="button"
                   className="letter-zoom-btn"
                   onClick={openFullscreen}
-                  aria-label="View full photo"
+                  aria-label={t("viewPhoto")}
                 >
-                  <Maximize2 size={13} /> Xem ảnh đầy đủ
+                  <Maximize2 size={13} /> {t("viewPhoto")}
                 </button>
 
                 {images.length > 1 && (
@@ -246,7 +248,7 @@ function LetterDetail({
                       type="button"
                       className="letter-gallery-arrow prev"
                       onClick={prevImg}
-                      aria-label="Previous photo"
+                      aria-label={t("previous")}
                     >
                       <ChevronLeft size={18} />
                     </button>
@@ -254,13 +256,13 @@ function LetterDetail({
                       type="button"
                       className="letter-gallery-arrow next"
                       onClick={nextImg}
-                      aria-label="Next photo"
+                      aria-label={t("next")}
                     >
                       <ChevronRight size={18} />
                     </button>
                     <div className="letter-gallery-badge">
                       <ImageIcon size={12} />
-                      <span>Trang {activeImgIndex + 1} / {images.length}</span>
+                      <span>{activeImgIndex + 1} / {images.length}</span>
                     </div>
                   </>
                 )}
@@ -277,7 +279,7 @@ function LetterDetail({
                         e.stopPropagation();
                         setActiveImgIndex(idx);
                       }}
-                      aria-label={`Xem ảnh trang ${idx + 1}`}
+                      aria-label={`${t("viewPhoto")} ${idx + 1}`}
                     >
                       <div
                         className="letter-thumb-bg"
@@ -297,7 +299,7 @@ function LetterDetail({
               </span>
               <span className="letter-detail-date">
                 <Calendar size={13} />{" "}
-                {format(new Date(`${letter.date}T00:00:00`), "MMMM d, yyyy")}
+                {new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" }).format(new Date(`${letter.date}T00:00:00`))}
               </span>
               {locationClean && (
                 <span className="letter-detail-location">
@@ -306,7 +308,7 @@ function LetterDetail({
               )}
               {images.length > 1 && (
                 <span className="letter-detail-img-count">
-                  <ImageIcon size={13} /> {images.length} ảnh thư
+                  <ImageIcon size={13} /> {images.length} {t("photos")}
                 </span>
               )}
             </div>
@@ -338,27 +340,27 @@ function LetterDetail({
       {/* Standalone Fullscreen Lightbox View */}
       {fullscreenImg && (
         <div
-          className="letter-fullscreen-lightbox"
+          className="ui-modal-backdrop letter-fullscreen-lightbox"
           role="dialog"
           aria-modal="true"
-          aria-label="Xem ảnh thư phóng to"
+          aria-label={t("viewPhoto")}
           onMouseDown={(e) => {
             e.stopPropagation();
             setFullscreenImg(null);
           }}
         >
           <div
-            className="letter-lightbox-content"
+            className="ui-modal-surface ui-modal-lightbox letter-lightbox-content"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <button
               type="button"
-              className="lightbox-close"
+              className="ui-modal-close lightbox-close"
               onClick={(e) => {
                 e.stopPropagation();
                 setFullscreenImg(null);
               }}
-              aria-label="Đóng ảnh"
+              aria-label={t("closePhoto")}
             >
               <X size={20} />
             </button>
@@ -383,10 +385,10 @@ function LetterDetail({
                     setFullscreenImg(images[prev]);
                   }}
                 >
-                  <ChevronLeft size={16} /> Trang trước
+                  <ChevronLeft size={16} /> {t("previous")}
                 </button>
                 <span className="lightbox-nav-counter">
-                  Trang {activeImgIndex + 1} / {images.length}
+                  {activeImgIndex + 1} / {images.length}
                 </span>
                 <button
                   type="button"
@@ -398,7 +400,7 @@ function LetterDetail({
                     setFullscreenImg(images[next]);
                   }}
                 >
-                  Trang sau <ChevronRight size={16} />
+                  {t("next")} <ChevronRight size={16} />
                 </button>
               </div>
             )}
@@ -418,6 +420,7 @@ function LetterCard({
   letter: Letter;
   onClick: () => void;
 }) {
+  const { t, locale } = useLanguage();
   const images = getLetterImages(letter);
   const preview = getLetterPreview(letter);
   const titleClean = cleanVietnameseText(letter.title);
@@ -440,7 +443,7 @@ function LetterCard({
           />
           <div className="letter-card-img-badge">
             <ImageIcon size={11} />
-            <span>{images.length} {images.length > 1 ? "photos" : "photo"}</span>
+            <span>{images.length} {images.length > 1 ? t("photos") : t("photo")}</span>
           </div>
         </div>
       ) : (
@@ -454,12 +457,12 @@ function LetterCard({
 
       <div className="recent-card-copy">
         <p className="card-kind">
-          LETTER <span>•</span>{" "}
-          {format(new Date(`${letter.date}T00:00:00`), "dd MMM").toUpperCase()}
+          {t("letter")} <span>•</span>{" "}
+          {new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short" }).format(new Date(`${letter.date}T00:00:00`)).toUpperCase()}
         </p>
         <h3>{titleClean}</h3>
         <p className="card-meta">
-          <BookHeart size={14} /> {fromClean} to {toClean}
+          <BookHeart size={14} /> {fromClean} → {toClean}
         </p>
       </div>
     </article>
@@ -469,6 +472,7 @@ function LetterCard({
 // ── Main Letters Panel ───────────────────────────────────────────────────────
 
 export function LettersPanel() {
+  const { t } = useLanguage();
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [letters, setLetters] = useState<Letter[]>([]);
@@ -503,7 +507,7 @@ export function LettersPanel() {
     return (
       <div className="letters-gate">
         <div className="letters-gate-inner">
-          <p className="letters-gate-sub">Checking authentication...</p>
+          <p className="letters-gate-sub">{t("checkingAuthentication")}</p>
         </div>
       </div>
     );
@@ -517,11 +521,11 @@ export function LettersPanel() {
     <section className="section-block letters-section">
       <div className="section-header">
         <div>
-          <p className="eyebrow">From the heart</p>
-          <h2>Letters</h2>
+          <p className="eyebrow">{t("fromTheHeart")}</p>
+          <h2>{t("letters")}</h2>
         </div>
         <p className="letters-count-badge">
-          <BookHeart size={14} /> {letters.length} letters
+          <BookHeart size={14} /> {letters.length} {t("letterCount")}
         </p>
       </div>
 
@@ -536,7 +540,7 @@ export function LettersPanel() {
       </div>
 
       <p className="letters-hint">
-        <Lock size={12} /> Each letter is kept private — just for the two of you.
+        <Lock size={12} /> {t("eachLetterPrivate")}
       </p>
 
       {openLetter && (

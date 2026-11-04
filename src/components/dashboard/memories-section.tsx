@@ -2,9 +2,8 @@
 
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ImageIcon, MapPin, Plus } from "lucide-react";
-import { format } from "date-fns";
 import memoriesData from "@/data/memories.json";
-import content from "@/data/relationship.json";
+import { useLanguage } from "@/components/dashboard/language-context";
 
 type RecentItem = {
   kind: "memory" | "date" | "letter";
@@ -18,9 +17,13 @@ type RecentItem = {
 function MemoryCard({
   item,
   onOpenImage,
+  viewPhotoLabel,
+  memoryLabel,
 }: {
   item: RecentItem;
   onOpenImage: (source: string, title: string) => void;
+  viewPhotoLabel: string;
+  memoryLabel: string;
 }) {
   return (
     <article className="recent-card memory-card">
@@ -35,11 +38,11 @@ function MemoryCard({
           className="mini-image"
           style={{ backgroundImage: `url('${item.image ?? ""}')` }}
         />
-        <span className="image-view-hint">View photo</span>
+        <span className="image-view-hint">{viewPhotoLabel}</span>
       </button>
       <div className="recent-card-copy">
         <p className="card-kind">
-          {item.label} <span>•</span> {item.dateLabel}
+          {memoryLabel} <span>•</span> {item.dateLabel}
         </p>
         <h3>{item.title}</h3>
         <p className="card-meta">
@@ -57,11 +60,13 @@ export function MemoriesSection({
   onOpenImage: (source: string, title: string) => void;
   onAddMemory: () => void;
 }) {
-  const [recentItems, setRecentItems] = useState<RecentItem[]>(
+  const { t } = useLanguage();
+  const [recentItems] = useState<RecentItem[]>(
     () => memoriesData.recentItems as RecentItem[]
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const fullGridRef = useRef<HTMLDivElement>(null);
 
   const scrollTo = (dir: "prev" | "next") => {
     const el = carouselRef.current;
@@ -84,19 +89,23 @@ export function MemoriesSection({
     setActiveIndex(nearest);
   };
 
+  const scrollToFullGrid = () => {
+    fullGridRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <section className="section-block recently-section">
       <div className="section-header">
         <div>
-          <p className="eyebrow">{content.labels.recentEyebrow}</p>
-          <h2>{content.labels.recentTitle}</h2>
+          <p className="eyebrow">{t("recentEyebrow")}</p>
+          <h2>{t("recently")}</h2>
         </div>
         <div className="section-header-actions">
           <button className="add-memory memories-add-btn" onClick={onAddMemory}>
-            <Plus size={16} /> Add memory
+            <Plus size={16} /> {t("addMemory")}
           </button>
-          <button className="text-button">
-            {content.labels.viewAll} <ChevronRight size={16} />
+          <button className="text-button" onClick={scrollToFullGrid}>
+            {t("viewAll")} <ChevronRight size={16} />
           </button>
         </div>
       </div>
@@ -108,28 +117,30 @@ export function MemoriesSection({
               key={`${item.kind}-${item.title}-${idx}`}
               item={item}
               onOpenImage={onOpenImage}
+              viewPhotoLabel={t("viewPhoto")}
+              memoryLabel={t("memoryLabel")}
             />
           ))}
         </div>
         {recentItems.length > 1 && (
           <div className="carousel-controls">
-            <button type="button" aria-label="Previous" onClick={() => scrollTo("prev")}>
+            <button type="button" aria-label={t("previous")} onClick={() => scrollTo("prev")}>
               <ChevronLeft size={17} />
             </button>
             <span>
               {activeIndex + 1} <i>/</i> {recentItems.length}
             </span>
-            <button type="button" aria-label="Next" onClick={() => scrollTo("next")}>
+            <button type="button" aria-label={t("next")} onClick={() => scrollTo("next")}>
               <ChevronRight size={17} />
             </button>
           </div>
         )}
       </div>
 
-      <div className="memories-full-grid">
+      <div className="memories-full-grid" ref={fullGridRef}>
         <div className="memories-full-header">
           <ImageIcon size={18} />
-          <span>All memories</span>
+          <span>{t("allMemories")}</span>
         </div>
         <div className="memories-all-grid">
           {recentItems.map((item, idx) => (
