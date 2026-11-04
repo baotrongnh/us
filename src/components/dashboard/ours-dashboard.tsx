@@ -120,6 +120,8 @@ function formatLocalizedDate(
 
 type MapLocation = {
   id: string;
+  name?: string;
+  city?: string;
   gender: "male" | "female";
   coords: [number, number];
 };
@@ -136,6 +138,8 @@ const mapLocations: MapLocation[] = (randomDatesData.map?.locations ?? []).map((
 
   return {
     id: location.id,
+    name: location.name,
+    city: location.city,
     gender: location.gender,
     coords: [latitude, longitude] as [number, number],
   };
@@ -143,7 +147,7 @@ const mapLocations: MapLocation[] = (randomDatesData.map?.locations ?? []).map((
 
 const LocationMapBody = dynamic(
   async () => {
-    const [{ MapContainer, Marker, TileLayer, useMap }, { divIcon, latLngBounds }] = await Promise.all([
+    const [{ MapContainer, Marker, TileLayer, Tooltip, useMap }, { divIcon, latLngBounds }] = await Promise.all([
       import("react-leaflet"),
       import("leaflet"),
     ]);
@@ -163,11 +167,13 @@ const LocationMapBody = dynamic(
     return function LocationMapBodyInner({
       markerData,
       tileUrl,
-      mapAttribution,
+      subdomains,
+      maxZoom,
     }: {
       markerData: MapLocation[];
       tileUrl: string;
-      mapAttribution: string;
+      subdomains?: string;
+      maxZoom?: number;
     }) {
       const markerIcon = (gender: "male" | "female") =>
         divIcon({
@@ -182,16 +188,33 @@ const LocationMapBody = dynamic(
           center={[15.87, 108.32]}
           zoom={5}
           scrollWheelZoom
+          attributionControl={false}
           className="date-map-instance"
         >
-          <TileLayer url={tileUrl} attribution={mapAttribution} />
+          <TileLayer
+            url={tileUrl}
+            subdomains={subdomains ?? "abcd"}
+            maxZoom={maxZoom ?? 19}
+          />
           <FitMapToLocations locations={markerData} />
           {markerData.map((marker) => (
             <Marker
               key={marker.id}
               position={marker.coords}
               icon={markerIcon(marker.gender)}
-            />
+            >
+              {(marker.name || marker.city) && (
+                <Tooltip
+                  permanent
+                  direction="top"
+                  offset={[0, -10]}
+                  className="date-map-tooltip"
+                >
+                  <span className="tooltip-name">{marker.name}</span>
+                  {marker.city && <span className="tooltip-city">({marker.city})</span>}
+                </Tooltip>
+              )}
+            </Marker>
           ))}
         </MapContainer>
       );
@@ -202,16 +225,11 @@ const LocationMapBody = dynamic(
 
 function LocationMapCard() {
   const { t } = useLanguage();
-  const mapData = randomDatesData.map;
   const markerData = mapLocations;
-  const vietmapApiKey = process.env.NEXT_PUBLIC_VIETMAP_KEY;
 
-  const tileUrl = vietmapApiKey
-    ? `https://maps.vietmap.vn/maps/tiles/st/{z}/{x}/{y}.png?apikey=${encodeURIComponent(vietmapApiKey)}`
-    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  const mapAttribution = vietmapApiKey
-    ? '&copy; <a href="https://vietmap.vn/">VietMap</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
+  // CartoDB Voyager displays crisp national borders, city/province names in Vietnamese,
+  // and high-resolution street tiles without requiring an API key.
+  const tileUrl = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
   return (
     <article className="location-map-card">
@@ -219,7 +237,8 @@ function LocationMapCard() {
         <LocationMapBody
           markerData={markerData}
           tileUrl={tileUrl}
-          mapAttribution={mapAttribution}
+          subdomains="abcd"
+          maxZoom={19}
         />
       </div>
     </article>

@@ -331,13 +331,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .music-playlist-dropdown {
   position: absolute;
   top: calc(100% + 10px);
-  right: 16px;
-  width: 260px;
+  left: 0;
+  width: 270px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 12px 36px rgba(0,0,0,.14);
-  z-index: 50;
+  box-shadow: 0 12px 36px rgba(0,0,0,.16);
+  z-index: 1000;
   overflow: hidden;
   animation: modal-in .2s ease;
 }
@@ -840,9 +840,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
   line-height: 32px;
 }
 .location-map-card .leaflet-control-attribution {
-  border-radius: 8px 0 0;
-  padding: 2px 6px;
-  font-size: 9px;
+  display: none !important;
+}
+.date-map-tooltip.leaflet-tooltip {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  border-radius: 9999px;
+  padding: 3px 9px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground, #1c1c1e);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+}
+.date-map-tooltip.leaflet-tooltip::before {
+  border-top-color: var(--card, #ffffff);
+}
+.date-map-tooltip .tooltip-name {
+  color: var(--primary, #e11d48);
+  font-weight: 700;
+  margin-right: 3px;
+}
+.date-map-tooltip .tooltip-city {
+  color: var(--muted-text, #6b7280);
+  font-weight: 500;
 }
 .date-map-pin-wrapper {
   background: transparent;
@@ -2331,8 +2353,11 @@ footer {
   .music-playlist-btn { display: grid; width: 30px; height: 30px; }
   .music-toggle { width: 34px; height: 34px; }
   .music-playlist-dropdown {
-    right: 0;
-    width: min(260px, calc(100vw - 32px));
+    left: 0;
+    right: auto;
+    width: min(280px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    z-index: 1000;
   }
   .theme-picker { padding-right: 7px; }
   .language-picker { padding-right: 7px; }

@@ -30,6 +30,22 @@ export function MusicPlayer() {
   const [titleOverflows, setTitleOverflows] = useState(false);
   const titleViewportRef = useRef<HTMLSpanElement>(null);
   const titleTextRef = useRef<HTMLSpanElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showPlaylist) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowPlaylist(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showPlaylist]);
 
   const displayTitle =
     currentTrack?.title ??
@@ -137,7 +153,7 @@ export function MusicPlayer() {
 
       {/* Playlist dropdown */}
       {showPlaylist && (
-        <div className="music-playlist-dropdown">
+        <div className="music-playlist-dropdown" ref={dropdownRef}>
           <div className="music-playlist-header">
             <span>{t("playlist")}</span>
             <button
