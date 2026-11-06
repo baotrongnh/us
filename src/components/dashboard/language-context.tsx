@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useSyncExternalStore } from "react";
+import { createLocalStoragePreference } from "@/lib/local-storage-preference";
 
 export type Language = "en" | "vi" | "ja" | "zh" | "de";
 
@@ -816,16 +817,25 @@ const localeByLanguage: Record<Language, string> = {
   de: "de-DE",
 };
 
+const languagePreference = createLocalStoragePreference<Language>(
+  "relationship-language",
+  "en",
+  (value): value is Language => Object.hasOwn(translations, value)
+);
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window === "undefined") return "en";
-    const saved = window.localStorage.getItem("relationship-language");
-    return saved && saved in translations ? (saved as Language) : "en";
-  });
+  const language = useSyncExternalStore(
+    languagePreference.subscribe,
+    languagePreference.getSnapshot,
+    languagePreference.getServerSnapshot
+  );
+
+  useEffect(() => {
+    document.documentElement.lang = localeByLanguage[language].split("-")[0];
+  }, [language]);
 
   const setLanguage = (nextLanguage: Language) => {
-    setLanguageState(nextLanguage);
-    window.localStorage.setItem("relationship-language", nextLanguage);
+    languagePreference.set(nextLanguage);
   };
 
   const t = (key: TranslationKey) => translations[language][key];

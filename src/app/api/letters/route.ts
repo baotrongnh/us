@@ -23,9 +23,7 @@ export async function GET() {
     const fileContent = fs.readFileSync(filePath, "utf-8");
     const data = JSON.parse(fileContent);
 
-    // Return letters without password field to keep client data clean
     return NextResponse.json({
-      title: data.title || "Letters Collection",
       letters: data.letters || [],
     });
   } catch (err) {

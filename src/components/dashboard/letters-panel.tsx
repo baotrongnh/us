@@ -1,28 +1,37 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { CSSProperties } from "react";
 import {
   BookHeart,
   Calendar,
   ChevronLeft,
   ChevronRight,
-  ImageIcon,
   Lock,
-  MapPin,
-  Maximize2,
   X,
 } from "lucide-react";
 import { useLanguage } from "@/components/dashboard/language-context";
+import type { PageFlip } from "page-flip";
 interface Letter {
   id: string;
-  title: string;
+  author: string;
   date: string;
-  from: string;
-  to: string;
-  location?: string;
-  imageUrl?: string;
-  images?: string[];
-  fullText: string;
+  pages: string[];
+}
+
+interface PreparedLetterPages {
+  aspectRatio: number;
+  sources: string[];
+}
+
+function loadLetterImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Unable to load letter page: ${src}`));
+    image.src = src;
+  });
 }
 
 function cleanVietnameseText(str?: string): string {
@@ -31,40 +40,6 @@ function cleanVietnameseText(str?: string): string {
     .normalize("NFD")
     .replace(/([a-zA-ZăâêôơưĂÂÊÔƠƯ])\s+([\u0300\u0301\u0303\u0309\u0323])/g, "$1$2")
     .normalize("NFC");
-}
-
-function getLetterImages(letter: Letter): string[] {
-  if ("images" in letter && Array.isArray(letter.images) && letter.images.length > 0) {
-    return letter.images;
-  }
-  if ("imageUrl" in letter && typeof letter.imageUrl === "string" && letter.imageUrl) {
-    return [letter.imageUrl];
-  }
-  return [];
-}
-
-function getLetterPreview(letter: Letter) {
-  const fullTextClean = cleanVietnameseText(letter.fullText || "");
-  const lines = fullTextClean.split("\n").map((l) => l.trim()).filter(Boolean);
-
-  const greeting = lines[0] || cleanVietnameseText(letter.title) || "Gửi em,";
-
-  let snippetLines: string[] = [];
-  if (lines.length > 1) {
-    snippetLines = lines.slice(1, 3);
-  } else {
-    const sentences = fullTextClean.split(/(?<=[.!?])\s+/).filter(Boolean);
-    snippetLines = sentences.slice(0, 2);
-  }
-
-  const formattedLines = snippetLines.map((l) =>
-    l.length > 65 ? l.slice(0, 62) + "..." : l
-  );
-
-  return {
-    greeting: greeting.length > 45 ? greeting.slice(0, 42) + "..." : greeting,
-    lines: formattedLines.length > 0 ? formattedLines : ["Nội dung lá thư..."],
-  };
 }
 
 // ── Section Password Gate ────────────────────────────────────────────────────
@@ -177,236 +152,344 @@ function LetterDetail({
   onClose: () => void;
 }) {
   const { t, locale } = useLanguage();
-  const images = getLetterImages(letter);
-  const [activeImgIndex, setActiveImgIndex] = useState(0);
-  const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
+  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [isBookReady, setIsBookReady] = useState(false);
+  const [bookError, setBookError] = useState(false);
+  const [preparedPages, setPreparedPages] = useState<PreparedLetterPages | null>(null);
+  const [pageSize, setPageSize] = useState({ width: 280, height: 390 });
+  const bookHostRef = useRef<HTMLDivElement>(null);
+  const pageFlipRef = useRef<PageFlip | null>(null);
+  const swipeStartRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+  } | null>(null);
+  const author = cleanVietnameseText(letter.author);
+  const formattedDate = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(`${letter.date}T12:00:00`));
 
-  const prevImg = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setActiveImgIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  useEffect(() => {
+    let cancelled = false;
+    setPreparedPages(null);
+    setIsBookReady(false);
+    setBookError(false);
+    setActivePageIndex(0);
+
+    void Promise.all(letter.pages.map(loadLetterImage))
+      .then((images) => {
+        const firstImage = images[0];
+        if (!firstImage || !firstImage.naturalWidth || !firstImage.naturalHeight) {
+          throw new Error("The letter does not contain a valid page image.");
+        }
+
+        const aspectRatio = firstImage.naturalWidth / firstImage.naturalHeight;
+        // Keep the original files instead of creating a lossy canvas copy.
+        const sources = images.map((image) => image.src);
+
+        if (!cancelled) setPreparedPages({ aspectRatio, sources });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        console.error("Failed to prepare letter page images.", error);
+        setBookError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [letter.id, letter.pages]);
+
+  useEffect(() => {
+    if (!preparedPages) return;
+    const resizePage = () => {
+      const isNarrowScreen = window.innerWidth < 640;
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const maxWidth = Math.max(180, Math.min(window.innerWidth - (isNarrowScreen ? 32 : 80), 720));
+      const maxHeight = Math.max(180, Math.min(viewportHeight - (isNarrowScreen ? 168 : 188), 860));
+      const width = Math.floor(Math.min(maxWidth, maxHeight * preparedPages.aspectRatio));
+      setPageSize({ width, height: Math.floor(width / preparedPages.aspectRatio) });
+    };
+
+    resizePage();
+    window.addEventListener("resize", resizePage);
+    return () => window.removeEventListener("resize", resizePage);
+  }, [preparedPages]);
+
+  useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => pageFlipRef.current?.update());
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [pageSize]);
+
+  useEffect(() => {
+    const host = bookHostRef.current;
+    if (!host || !preparedPages) return;
+
+    let cancelled = false;
+    let pageFlip: PageFlip | null = null;
+    const container = host.ownerDocument.createElement("div");
+    container.className = "letter-flip-book";
+    host.appendChild(container);
+    setIsBookReady(false);
+    setBookError(false);
+    setActivePageIndex(0);
+
+    void import("page-flip").then((library) => {
+      if (cancelled) return;
+
+      const { PageFlip: PageFlipConstructor } = library.default;
+      pageFlip = new PageFlipConstructor(container, {
+        width: 640,
+        height: Math.round(640 / preparedPages.aspectRatio),
+        size: "stretch",
+        // PageFlip switches to a two-page spread once the reader is wider
+        // than twice this value. Keep it above our 720px reader maximum so
+        // every supplied image is always one logical page.
+        minWidth: 400,
+        maxWidth: 720,
+        minHeight: 240,
+        maxHeight: 1000,
+        usePortrait: true,
+        autoSize: false,
+        showCover: false,
+        maxShadowOpacity: 0.42,
+        mobileScrollSupport: false,
+        swipeDistance: 10,
+        useMouseEvents: false,
+      });
+
+      pageFlip.on("flip", ({ data }) => {
+        if (typeof data === "number") setActivePageIndex(data);
+      });
+      pageFlip.on("init", ({ data }) => {
+        if (typeof data === "object" && data !== null && "page" in data && typeof data.page === "number") {
+          setActivePageIndex(data.page);
+        }
+        setIsBookReady(true);
+      });
+
+      pageFlipRef.current = pageFlip;
+      pageFlip.loadFromImages(preparedPages.sources);
+    }).catch((error: unknown) => {
+      if (cancelled) return;
+      console.error("Failed to load the letter page-flip reader.", error);
+      pageFlipRef.current = null;
+      pageFlip?.destroy();
+      pageFlip = null;
+      container.remove();
+      setBookError(true);
+    });
+
+    return () => {
+      cancelled = true;
+      if (pageFlipRef.current === pageFlip) pageFlipRef.current = null;
+      pageFlip?.destroy();
+      container.remove();
+    };
+  }, [letter.id, preparedPages]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (event.key === "ArrowRight") pageFlipRef.current?.flipNext();
+      if (event.key === "ArrowLeft") pageFlipRef.current?.flipPrev();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const getPagePoint = (event: React.PointerEvent<HTMLDivElement>) => {
+    const pageSurface = bookHostRef.current?.querySelector("canvas");
+    const bounds = pageSurface?.getBoundingClientRect() ?? event.currentTarget.getBoundingClientRect();
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
   };
 
-  const nextImg = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setActiveImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  const finishCommittedFlip = (
+    point: { x: number; y: number },
+    isTouch: boolean,
+  ) => {
+    const pageFlip = pageFlipRef.current;
+    if (!pageFlip) return;
+
+    const bounds = pageFlip.getBoundsRect();
+    const currentDirection = pageFlip.getFlipController().getCalculation()?.getDirection();
+    const centerX = bounds.left + bounds.width / 2;
+    const targetX = currentDirection === 1 ? centerX + 2 : centerX - 2;
+    const distanceX = targetX - point.x;
+    let frame = 0;
+    const frames = 8;
+
+    const continueFold = () => {
+      frame += 1;
+      const progress = frame / frames;
+      const easedProgress = 1 - (1 - progress) ** 3;
+      const nextPoint = { x: point.x + distanceX * easedProgress, y: point.y };
+      pageFlip.userMove(nextPoint, isTouch);
+      if (frame < frames) {
+        window.requestAnimationFrame(continueFold);
+      } else {
+        pageFlip.userStop(nextPoint);
+      }
+    };
+
+    window.requestAnimationFrame(continueFold);
   };
 
-  const openFullscreen = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    if (images.length > 0) {
-      setFullscreenImg(images[activeImgIndex]);
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (
+      !pageFlipRef.current ||
+      (event.pointerType === "mouse" && event.button !== 0) ||
+      (event.target instanceof Element && event.target.closest("button"))
+    ) return;
+
+    swipeStartRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pageFlipRef.current.startUserTouch(getPagePoint(event));
+    event.preventDefault();
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const swipeStart = swipeStartRef.current;
+    if (swipeStart?.pointerId !== event.pointerId) return;
+    pageFlipRef.current?.userMove(getPagePoint(event), event.pointerType === "touch");
+    event.preventDefault();
+  };
+
+  const handlePointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    const swipeStart = swipeStartRef.current;
+    if (!swipeStart || swipeStart.pointerId !== event.pointerId) return;
+
+    const horizontalDistance = event.clientX - swipeStart.x;
+    const verticalDistance = event.clientY - swipeStart.y;
+    const hasPageInSwipeDirection = horizontalDistance < 0
+      ? activePageIndex < letter.pages.length - 1
+      : activePageIndex > 0;
+    const isCommittedSwipe =
+      hasPageInSwipeDirection &&
+      Math.abs(horizontalDistance) >= event.currentTarget.getBoundingClientRect().width * 0.24 &&
+      Math.abs(horizontalDistance) > Math.abs(verticalDistance);
+
+    const finalPoint = getPagePoint(event);
+    if (isCommittedSwipe) {
+      finishCommittedFlip(finalPoint, event.pointerType === "touch");
+    } else {
+      pageFlipRef.current?.userStop(finalPoint);
+    }
+
+    swipeStartRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
   };
 
-  const fullTextClean = cleanVietnameseText(letter.fullText);
-  const paragraphs = fullTextClean.split(/\n\n+/);
-  const titleClean = cleanVietnameseText(letter.title);
-  const fromClean = cleanVietnameseText(letter.from);
-  const toClean = cleanVietnameseText(letter.to);
-  const locationClean = cleanVietnameseText(letter.location);
+  const handlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (swipeStartRef.current?.pointerId !== event.pointerId) return;
+    pageFlipRef.current?.userStop(getPagePoint(event));
+    swipeStartRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
-  return (
-    <>
-      <div
-        className="ui-modal-backdrop letter-detail-backdrop"
-        onMouseDown={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-label={titleClean}
+  return createPortal(
+    <div
+      className="ui-modal-backdrop letter-detail-backdrop"
+      onMouseDown={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${author} · ${formattedDate}`}
+    >
+      <section
+        className="ui-modal-surface letter-detail-modal"
+        onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="ui-modal-surface letter-detail-modal" onMouseDown={(e) => e.stopPropagation()}>
-          <button className="ui-modal-close lightbox-close" onClick={onClose} aria-label={t("close")}>
+        <header className="letter-detail-toolbar">
+          <button
+            type="button"
+            className="ui-modal-close letter-detail-close"
+            onClick={onClose}
+            aria-label={t("close")}
+          >
             <X size={19} />
           </button>
+        </header>
 
-          {images.length > 0 && (
-            <div className="letter-detail-gallery">
-              <div
-                className="letter-detail-image-container"
-                onClick={openFullscreen}
-                title={t("viewPhoto")}
-              >
-                <img
-                  src={images[activeImgIndex]}
-                  alt={`${titleClean} trang ${activeImgIndex + 1}`}
-                  className="letter-full-img"
-                />
-
-                <button
-                  type="button"
-                  className="letter-zoom-btn"
-                  onClick={openFullscreen}
-                  aria-label={t("viewPhoto")}
-                >
-                  <Maximize2 size={13} /> {t("viewPhoto")}
-                </button>
-
-                {images.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      className="letter-gallery-arrow prev"
-                      onClick={prevImg}
-                      aria-label={t("previous")}
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      className="letter-gallery-arrow next"
-                      onClick={nextImg}
-                      aria-label={t("next")}
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                    <div className="letter-gallery-badge">
-                      <ImageIcon size={12} />
-                      <span>{activeImgIndex + 1} / {images.length}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {images.length > 1 && (
-                <div className="letter-gallery-thumbs">
-                  {images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className={`letter-thumb-btn ${idx === activeImgIndex ? "active" : ""}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveImgIndex(idx);
-                      }}
-                      aria-label={`${t("viewPhoto")} ${idx + 1}`}
-                    >
-                      <div
-                        className="letter-thumb-bg"
-                        style={{ backgroundImage: `url('${img}')` }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="letter-detail-body">
-            <div className="letter-detail-meta">
-              <span className="letter-from-to">
-                <BookHeart size={13} /> {fromClean} → {toClean}
-              </span>
-              <span className="letter-detail-date">
-                <Calendar size={13} />{" "}
-                {new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" }).format(new Date(`${letter.date}T00:00:00`))}
-              </span>
-              {locationClean && (
-                <span className="letter-detail-location">
-                  <MapPin size={13} /> {locationClean}
-                </span>
-              )}
-              {images.length > 1 && (
-                <span className="letter-detail-img-count">
-                  <ImageIcon size={13} /> {images.length} {t("photos")}
-                </span>
-              )}
-            </div>
-
-            <h2 className="letter-detail-title">{titleClean}</h2>
-
-            <div className="letter-detail-paper-box">
-              <div className="letter-detail-text">
-                {paragraphs.map((paragraph, i) => {
-                  const lines = paragraph.split("\n");
-                  const isSignature = paragraph.startsWith("—") || paragraph.includes("Hồ Chí Minh, ngày");
-                  return (
-                    <p key={i} className={isSignature ? "letter-paragraph-signature" : "letter-paragraph"}>
-                      {lines.map((line, j) => (
-                        <span key={j}>
-                          {line}
-                          {j < lines.length - 1 && <br />}
-                        </span>
-                      ))}
-                    </p>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Standalone Fullscreen Lightbox View */}
-      {fullscreenImg && (
         <div
-          className="ui-modal-backdrop letter-fullscreen-lightbox"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("viewPhoto")}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            setFullscreenImg(null);
-          }}
+          className="letter-reader"
+          style={{ width: `${pageSize.width}px` } as CSSProperties}
         >
           <div
-            className="ui-modal-surface ui-modal-lightbox letter-lightbox-content"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="ui-modal-close lightbox-close"
-              onClick={(e) => {
-                e.stopPropagation();
-                setFullscreenImg(null);
-              }}
-              aria-label={t("closePhoto")}
+          className="letter-page-stage"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerCancel}
+          style={{
+            height: `${pageSize.height}px`,
+          } as CSSProperties}
+          aria-busy={!isBookReady && !bookError}
+        >
+          <div
+            ref={bookHostRef}
+            className="letter-flip-book-host"
+            role="img"
+            aria-label={`Letter by ${author}, page ${activePageIndex + 1} of ${letter.pages.length}`}
+          />
+          {!isBookReady && !bookError && (
+            <div
+              className="letter-book-loading"
+              role="status"
+              aria-label={locale.startsWith("vi") ? "Đang tải thư" : "Loading letter"}
             >
-              <X size={20} />
-            </button>
-
-            <div className="letter-lightbox-img-wrap">
-              <img
-                src={fullscreenImg}
-                alt="Ảnh thư phóng to"
-                className="letter-lightbox-full-img"
-              />
+              <span />
             </div>
-
-            {images.length > 1 && (
-              <div className="lightbox-gallery-nav">
-                <button
-                  type="button"
-                  className="lightbox-nav-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const prev = activeImgIndex === 0 ? images.length - 1 : activeImgIndex - 1;
-                    setActiveImgIndex(prev);
-                    setFullscreenImg(images[prev]);
-                  }}
-                >
-                  <ChevronLeft size={16} /> {t("previous")}
-                </button>
-                <span className="lightbox-nav-counter">
-                  {activeImgIndex + 1} / {images.length}
-                </span>
-                <button
-                  type="button"
-                  className="lightbox-nav-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const next = activeImgIndex === images.length - 1 ? 0 : activeImgIndex + 1;
-                    setActiveImgIndex(next);
-                    setFullscreenImg(images[next]);
-                  }}
-                >
-                  {t("next")} <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
+          )}
+          {bookError && (
+            <p className="letter-book-error" role="alert">
+              {locale.startsWith("vi") ? "Không thể tải trang thư." : "Unable to load this letter."}
+            </p>
+          )}
           </div>
+          {letter.pages.length > 1 && preparedPages && (
+            <nav className="letter-page-controls" aria-label="Letter page navigation">
+              <button
+                type="button"
+                className="letter-page-arrow previous"
+                onClick={() => pageFlipRef.current?.flipPrev()}
+                aria-label={t("previous")}
+                disabled={!isBookReady || activePageIndex === 0}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className="letter-page-count" aria-live="polite">
+                {activePageIndex + 1} / {letter.pages.length}
+              </span>
+              <button
+                type="button"
+                className="letter-page-arrow next"
+                onClick={() => pageFlipRef.current?.flipNext()}
+                aria-label={t("next")}
+                disabled={!isBookReady || activePageIndex >= letter.pages.length - 1}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </nav>
+          )}
         </div>
-      )}
-    </>
+
+        <footer className="letter-detail-footer">
+          <span><BookHeart size={13} /> {author}</span>
+          <span><Calendar size={13} /> <time dateTime={letter.date}>{formattedDate}</time></span>
+        </footer>
+      </section>
+    </div>,
+    document.body
   );
 }
 
@@ -419,12 +502,13 @@ function LetterCard({
   letter: Letter;
   onClick: () => void;
 }) {
-  const { t, locale } = useLanguage();
-  const images = getLetterImages(letter);
-  const preview = getLetterPreview(letter);
-  const titleClean = cleanVietnameseText(letter.title);
-  const fromClean = cleanVietnameseText(letter.from);
-  const toClean = cleanVietnameseText(letter.to);
+  const { locale } = useLanguage();
+  const author = cleanVietnameseText(letter.author);
+  const formattedDate = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(`${letter.date}T12:00:00`));
 
   return (
     <article
@@ -432,37 +516,25 @@ function LetterCard({
       onClick={onClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      aria-label={`${author} · ${formattedDate}`}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
     >
-      {images.length > 0 ? (
-        <div className="letter-card-image-preview">
-          <div
-            className="letter-card-img-cover"
-            style={{ backgroundImage: `url('${images[0]}')` }}
-          />
-          <div className="letter-card-img-badge">
-            <ImageIcon size={11} />
-            <span>{images.length} {images.length > 1 ? t("photos") : t("photo")}</span>
-          </div>
-        </div>
-      ) : (
-        <div className="letter-card-paper">
-          <span className="letter-greeting">{preview.greeting}</span>
-          {preview.lines.map((line, i) => (
-            <span key={i} className="letter-preview-line">{line}</span>
-          ))}
-        </div>
-      )}
-
-      <div className="recent-card-copy">
-        <p className="card-kind">
-          {t("letter")} <span>•</span>{" "}
-          {new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short" }).format(new Date(`${letter.date}T00:00:00`)).toUpperCase()}
-        </p>
-        <h3>{titleClean}</h3>
-        <p className="card-meta">
-          <BookHeart size={14} /> {fromClean} → {toClean}
-        </p>
+      <div className="letter-card-image-preview">
+        <img
+          className="letter-card-page"
+          src={letter.pages[0]}
+          alt={`First page of letter by ${author}`}
+          loading="lazy"
+        />
+      </div>
+      <div className="letter-card-meta">
+        <span><BookHeart size={12} /> {author}</span>
+        <span><Calendar size={12} /> <time dateTime={letter.date}>{formattedDate}</time></span>
       </div>
     </article>
   );

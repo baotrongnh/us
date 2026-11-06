@@ -13,7 +13,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import content from "@/data/relationship.json";
 import memoriesData from "@/data/memories.json";
 import { MusicPlayer } from "@/components/dashboard/music-player";
@@ -32,6 +32,7 @@ import { formatLocalizedDate } from "@/lib/date-format";
 import type { RecentItem } from "@/lib/types";
 import type { MapLocation } from "@/lib/map-location";
 import type { SiteNotification } from "@/lib/site-notification";
+import { createLocalStoragePreference } from "@/lib/local-storage-preference";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,11 @@ const themes: { id: Theme; label: string; colors: [string, string, string] }[] =
   { id: "midnight",   label: "Midnight",      colors: ["#10131a", "#f0a8c0", "#394153"] },
   { id: "blue-pastel", label: "Blue pastel",  colors: ["#f0f4ff", "#7baff5", "#c8d9f8"] },
 ];
+const themePreference = createLocalStoragePreference<Theme>(
+  "relationship-theme",
+  "pastel-pink",
+  (value): value is Theme => themes.some((option) => option.id === value)
+);
 const themeLabelKeys: Record<Theme, TranslationKey> = {
   "pastel-pink": "themePastel",
   midnight: "themeMidnight",
@@ -252,11 +258,11 @@ function DashboardContent({
   initialNotifications: SiteNotification[];
 }) {
   const { t, locale } = useLanguage();
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "pastel-pink";
-    const saved = window.localStorage.getItem("relationship-theme");
-    return saved && themes.some((option) => option.id === saved) ? (saved as Theme) : "pastel-pink";
-  });
+  const theme = useSyncExternalStore(
+    themePreference.subscribe,
+    themePreference.getSnapshot,
+    themePreference.getServerSnapshot
+  );
   const [navOpen, setNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<Section>("home");
   const [isTourReady, setIsTourReady] = useState(!siteConfig.welcomeModal.enabled);
@@ -335,8 +341,7 @@ function DashboardContent({
   const today = new Date();
 
   const selectTheme = (next: Theme) => {
-    setTheme(next);
-    window.localStorage.setItem("relationship-theme", next);
+    themePreference.set(next);
   };
 
   const showToast = (msg: string, duration = 2800) => {
