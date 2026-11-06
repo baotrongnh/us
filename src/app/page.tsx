@@ -10,7 +10,7 @@ export default async function Home() {
   if (settings.maintenance) {
     return (
       <LanguageProvider>
-        <MaintenancePage />
+        <MaintenancePage maintenanceEndsAt={settings.maintenanceEndsAt} />
       </LanguageProvider>
     );
   }

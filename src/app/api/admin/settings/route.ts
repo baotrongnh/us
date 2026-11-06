@@ -33,20 +33,41 @@ export async function PATCH(request: Request) {
   const authError = await authorize(request);
   if (authError) return authError;
 
-  let body: { maintenance?: unknown; locations?: unknown };
+  let body: { maintenance?: unknown; maintenanceEndsAt?: unknown; locations?: unknown };
   let locations: MapLocation[] | undefined;
+  let maintenanceEndsAt: string | null | undefined;
   try {
     const requestBody: unknown = await request.json();
     if (typeof requestBody !== "object" || requestBody === null || Array.isArray(requestBody)) {
       return NextResponse.json({ error: "Invalid request." }, { status: 400 });
     }
-    body = requestBody as { maintenance?: unknown; locations?: unknown };
+    body = requestBody as {
+      maintenance?: unknown;
+      maintenanceEndsAt?: unknown;
+      locations?: unknown;
+    };
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
   if ("maintenance" in body && typeof body.maintenance !== "boolean") {
     return NextResponse.json({ error: "Maintenance must be true or false." }, { status: 400 });
+  }
+  if ("maintenanceEndsAt" in body) {
+    if (body.maintenanceEndsAt === null) {
+      maintenanceEndsAt = null;
+    } else if (
+      typeof body.maintenanceEndsAt !== "string" ||
+      !Number.isFinite(Date.parse(body.maintenanceEndsAt)) ||
+      Date.parse(body.maintenanceEndsAt) <= Date.now()
+    ) {
+      return NextResponse.json(
+        { error: "The maintenance end time must be a valid future date and time." },
+        { status: 400 }
+      );
+    } else {
+      maintenanceEndsAt = new Date(body.maintenanceEndsAt).toISOString();
+    }
   }
   if ("locations" in body) {
     try {
@@ -58,13 +79,18 @@ export async function PATCH(request: Request) {
       );
     }
   }
-  if (!("maintenance" in body) && !("locations" in body)) {
+  if (
+    !("maintenance" in body) &&
+    !("maintenanceEndsAt" in body) &&
+    !("locations" in body)
+  ) {
     return NextResponse.json({ error: "Provide a setting to update." }, { status: 400 });
   }
 
   try {
     const updates = {
       ...(typeof body.maintenance === "boolean" ? { maintenance: body.maintenance } : {}),
+      ...(maintenanceEndsAt !== undefined ? { maintenanceEndsAt } : {}),
       ...(locations ? { locations } : {}),
     };
     return NextResponse.json(await updateSiteSettings(updates));

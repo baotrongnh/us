@@ -9,10 +9,20 @@ import type { MapLocation } from "@/lib/map-location";
 type AdminStatus = "signed-out" | "signed-in";
 type LocationPreset = (typeof locationPresets)[number];
 
+function toLocalDateTimeInput(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+}
+
 export function AdminPanel() {
   const [status, setStatus] = useState<AdminStatus>("signed-out");
   const [password, setPassword] = useState("");
   const [maintenance, setMaintenance] = useState(false);
+  const [maintenanceEndsAt, setMaintenanceEndsAt] = useState<string | null>(null);
+  const [maintenanceEndsAtDraft, setMaintenanceEndsAtDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isAwaitingCity, setIsAwaitingCity] = useState(false);
@@ -40,18 +50,25 @@ export function AdminPanel() {
     });
     const data = (await response.json()) as {
       maintenance?: boolean;
+      maintenanceEndsAt?: string | null;
       locations?: MapLocation[];
       error?: string;
     };
     if (
       !response.ok ||
       typeof data.maintenance !== "boolean" ||
+      (data.maintenanceEndsAt !== null &&
+        typeof data.maintenanceEndsAt !== "string") ||
       !Array.isArray(data.locations) ||
       data.locations.length === 0
     ) {
       throw new Error(data.error ?? "Could not load settings.");
     }
     setMaintenance(data.maintenance);
+    setMaintenanceEndsAt(data.maintenanceEndsAt ?? null);
+    setMaintenanceEndsAtDraft(
+      data.maintenanceEndsAt ? toLocalDateTimeInput(data.maintenanceEndsAt) : ""
+    );
     setLocations(data.locations);
     setSelectedPersonId(data.locations[0].id);
     setCity(data.locations[0].city);
@@ -99,6 +116,55 @@ export function AdminPanel() {
       setMaintenanceNotice("Settings saved. The website will use this mode on the next page request.");
     } catch (saveError) {
       setMaintenanceError(saveError instanceof Error ? saveError.message : "Could not save settings.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveMaintenanceEndTime = async () => {
+    setMaintenanceError("");
+    setMaintenanceNotice("");
+    let nextEndsAt: string | null = null;
+    if (maintenanceEndsAtDraft) {
+      const endTimestamp = new Date(maintenanceEndsAtDraft).getTime();
+      if (!Number.isFinite(endTimestamp) || endTimestamp <= Date.now()) {
+        setMaintenanceError("Choose a future date and time.");
+        return;
+      }
+      nextEndsAt = new Date(endTimestamp).toISOString();
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-password": password },
+        body: JSON.stringify({ maintenanceEndsAt: nextEndsAt }),
+      });
+      const data = (await response.json()) as {
+        maintenanceEndsAt?: string | null;
+        error?: string;
+      };
+      if (
+        !response.ok ||
+        (data.maintenanceEndsAt !== null &&
+          typeof data.maintenanceEndsAt !== "string")
+      ) {
+        throw new Error(data.error ?? "Could not save the maintenance end time.");
+      }
+      setMaintenanceEndsAt(data.maintenanceEndsAt ?? null);
+      setMaintenanceEndsAtDraft(
+        data.maintenanceEndsAt ? toLocalDateTimeInput(data.maintenanceEndsAt) : ""
+      );
+      setMaintenanceNotice(
+        data.maintenanceEndsAt
+          ? "Maintenance countdown saved. The website will remain in maintenance mode until you turn it off."
+          : "Maintenance countdown cleared."
+      );
+    } catch (saveError) {
+      setMaintenanceError(
+        saveError instanceof Error ? saveError.message : "Could not save the maintenance end time."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -212,6 +278,8 @@ export function AdminPanel() {
 
   const signOut = async () => {
     setPassword("");
+    setMaintenanceEndsAt(null);
+    setMaintenanceEndsAtDraft("");
     setLocations([]);
     setSelectedPersonId("");
     setStatus("signed-out");
@@ -292,6 +360,38 @@ export function AdminPanel() {
                 >
                   <span />
                 </button>
+              </div>
+              <div className="admin-maintenance-schedule">
+                <label htmlFor="maintenance-ends-at">Expected maintenance end</label>
+                <input
+                  id="maintenance-ends-at"
+                  type="datetime-local"
+                  min={toLocalDateTimeInput(new Date().toISOString())}
+                  value={maintenanceEndsAtDraft}
+                  onChange={(event) => {
+                    setMaintenanceEndsAtDraft(event.target.value);
+                    setMaintenanceError("");
+                    setMaintenanceNotice("");
+                  }}
+                  disabled={isSaving}
+                />
+                <p className="admin-muted">
+                  Leave empty to hide the countdown. Time is shown in your local timezone; maintenance will not turn off automatically.
+                </p>
+                <button
+                  type="button"
+                  className="admin-secondary-button admin-maintenance-save"
+                  onClick={() => void saveMaintenanceEndTime()}
+                  disabled={isSaving}
+                >
+                  <Save size={15} />
+                  {isSaving ? "Saving..." : "Save countdown"}
+                </button>
+                {maintenanceEndsAt && (
+                  <span className="admin-schedule-current">
+                    Current end: {new Date(maintenanceEndsAt).toLocaleString()}
+                  </span>
+                )}
               </div>
               <div className="admin-connection"><ShieldCheck size={16} /> Connected to Supabase</div>
               {(maintenanceError || maintenanceNotice) && (

@@ -31,7 +31,7 @@ This is the Next.js client for **ours.**, a private relationship dashboard for T
 - `src/app/admin/page.tsx` and `src/components/admin/admin-panel.tsx`: English-only admin page at `/admin`, password protected with the Letters password; password is only kept in page memory and sent per request. Do not persist an Admin session until specifically requested.
 - `src/app/api/admin/`: Admin password verification and protected site-settings endpoints. Keep Supabase service-key access server-only.
 - `src/lib/`: small shared utilities and types such as locale-aware date formatting, memory records, Admin password verification, and Supabase site settings.
-- Supabase site settings use the `public.site_config` singleton row (`id = 1`) and its JSON `setting` column. Maintenance is stored at `setting.maintenance`; relationship map positions are stored at `setting.map.locations`. `SUPABASE_URL` may be either the project URL or the REST endpoint ending in `/rest/v1/site_config`.
+- Supabase site settings use the `public.site_config` singleton row (`id = 1`) and its JSON `setting` column. Maintenance is stored at `setting.maintenance`, its optional scheduled end time at `setting.maintenanceEndsAt` (ISO timestamp or `null`), and relationship map positions at `setting.map.locations`. A maintenance countdown never disables maintenance automatically. `SUPABASE_URL` may be either the project URL or the REST endpoint ending in `/rest/v1/site_config`.
 - `public/images/` and `public/audio/`: static media served by the app.
 
 ## Editable data

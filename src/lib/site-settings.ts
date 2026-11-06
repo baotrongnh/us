@@ -8,6 +8,7 @@ type SiteSettingsRow = {
 
 type SiteSettingsUpdates = {
   maintenance?: boolean;
+  maintenanceEndsAt?: string | null;
   locations?: MapLocation[];
 };
 
@@ -109,6 +110,15 @@ export async function getSiteSettings() {
   if (typeof setting.maintenance !== "boolean") {
     throw new Error("Supabase site_config.setting.maintenance must be a boolean.");
   }
+  const maintenanceEndsAt = setting.maintenanceEndsAt;
+  if (
+    maintenanceEndsAt !== undefined &&
+    maintenanceEndsAt !== null &&
+    (typeof maintenanceEndsAt !== "string" ||
+      !Number.isFinite(Date.parse(maintenanceEndsAt)))
+  ) {
+    throw new Error("Supabase site_config.setting.maintenanceEndsAt must be a valid date or null.");
+  }
 
   const mapSetting =
     typeof setting.map === "object" && setting.map !== null
@@ -116,6 +126,7 @@ export async function getSiteSettings() {
       : null;
   return {
     maintenance: setting.maintenance,
+    maintenanceEndsAt: typeof maintenanceEndsAt === "string" ? maintenanceEndsAt : null,
     locations: parseMapLocations(mapSetting?.locations),
   };
 }
@@ -126,10 +137,20 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured.");
   }
   if (
-    (updates.maintenance === undefined && updates.locations === undefined) ||
+    (updates.maintenance === undefined &&
+      updates.maintenanceEndsAt === undefined &&
+      updates.locations === undefined) ||
     (updates.maintenance !== undefined && typeof updates.maintenance !== "boolean")
   ) {
     throw new Error("Provide a valid maintenance value or map locations to update.");
+  }
+  if (
+    updates.maintenanceEndsAt !== undefined &&
+    updates.maintenanceEndsAt !== null &&
+    (!Number.isFinite(Date.parse(updates.maintenanceEndsAt)) ||
+      Date.parse(updates.maintenanceEndsAt) <= Date.now())
+  ) {
+    throw new Error("The maintenance end time must be in the future.");
   }
 
   const currentRow = await getSiteSettingsRow(config);
@@ -137,6 +158,9 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
 
   if (updates.maintenance !== undefined) {
     setting.maintenance = updates.maintenance;
+  }
+  if (updates.maintenanceEndsAt !== undefined) {
+    setting.maintenanceEndsAt = updates.maintenanceEndsAt;
   }
   if (updates.locations) {
     const locations = parseMapLocations(updates.locations);
@@ -173,6 +197,20 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
   ) {
     throw new Error("The updated maintenance value did not match the requested value.");
   }
+  const savedMaintenanceEndsAt = rows[0].setting.maintenanceEndsAt;
+  if (
+    savedMaintenanceEndsAt !== undefined &&
+    savedMaintenanceEndsAt !== null &&
+    (typeof savedMaintenanceEndsAt !== "string" ||
+      !Number.isFinite(Date.parse(savedMaintenanceEndsAt)))
+  ) {
+    throw new Error("Supabase did not return a valid maintenance end time.");
+  }
+  const maintenanceSettings = {
+    maintenance: rows[0].setting.maintenance,
+    maintenanceEndsAt:
+      typeof savedMaintenanceEndsAt === "string" ? savedMaintenanceEndsAt : null,
+  };
   if (updates.locations) {
     const updatedMap = rows[0].setting.map;
     const locations = parseMapLocations(
@@ -180,7 +218,7 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
         ? (updatedMap as Record<string, unknown>).locations
         : undefined
     );
-    return { maintenance: rows[0].setting.maintenance, locations };
+    return { ...maintenanceSettings, locations };
   }
-  return { maintenance: rows[0].setting.maintenance };
+  return maintenanceSettings;
 }
