@@ -1,10 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { LocateFixed, LockKeyhole, LogOut, MapPin, Save, Settings2, ShieldCheck } from "lucide-react";
+import {
+  Bell,
+  LocateFixed,
+  LockKeyhole,
+  LogOut,
+  MapPin,
+  Save,
+  Settings2,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import locationPresets from "@/data/location-presets.json";
 import type { MapLocation } from "@/lib/map-location";
+import type { SiteNotification } from "@/lib/site-notification";
 
 type AdminStatus = "signed-out" | "signed-in";
 type LocationPreset = (typeof locationPresets)[number];
@@ -24,9 +35,13 @@ export function AdminPanel() {
   const [maintenanceEndsAt, setMaintenanceEndsAt] = useState<string | null>(null);
   const [maintenanceEndsAtDraft, setMaintenanceEndsAtDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingNotification, setIsSavingNotification] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isAwaitingCity, setIsAwaitingCity] = useState(false);
   const [locations, setLocations] = useState<MapLocation[]>([]);
+  const [notifications, setNotifications] = useState<SiteNotification[]>([]);
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState("");
   const [city, setCity] = useState("");
   const [latitude, setLatitude] = useState("");
@@ -36,6 +51,8 @@ export function AdminPanel() {
   const [maintenanceNotice, setMaintenanceNotice] = useState("");
   const [locationError, setLocationError] = useState("");
   const [locationNotice, setLocationNotice] = useState("");
+  const [notificationError, setNotificationError] = useState("");
+  const [notificationNotice, setNotificationNotice] = useState("");
   const cityInputRef = useRef<HTMLInputElement>(null);
   const needsCityName = isAwaitingCity && !city.trim();
 
@@ -52,6 +69,7 @@ export function AdminPanel() {
       maintenance?: boolean;
       maintenanceEndsAt?: string | null;
       locations?: MapLocation[];
+      notifications?: SiteNotification[];
       error?: string;
     };
     if (
@@ -60,7 +78,8 @@ export function AdminPanel() {
       (data.maintenanceEndsAt !== null &&
         typeof data.maintenanceEndsAt !== "string") ||
       !Array.isArray(data.locations) ||
-      data.locations.length === 0
+      data.locations.length === 0 ||
+      !Array.isArray(data.notifications)
     ) {
       throw new Error(data.error ?? "Could not load settings.");
     }
@@ -70,6 +89,7 @@ export function AdminPanel() {
       data.maintenanceEndsAt ? toLocalDateTimeInput(data.maintenanceEndsAt) : ""
     );
     setLocations(data.locations);
+    setNotifications(data.notifications);
     setSelectedPersonId(data.locations[0].id);
     setCity(data.locations[0].city);
     setLatitude(String(data.locations[0].coords[0]));
@@ -168,6 +188,65 @@ export function AdminPanel() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const saveNotifications = async (nextNotifications: SiteNotification[]) => {
+    setIsSavingNotification(true);
+    setNotificationError("");
+    setNotificationNotice("");
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-password": password },
+        body: JSON.stringify({ notifications: nextNotifications }),
+      });
+      const data = (await response.json()) as {
+        notifications?: SiteNotification[];
+        error?: string;
+      };
+      if (!response.ok || !Array.isArray(data.notifications)) {
+        throw new Error(data.error ?? "Could not save notifications.");
+      }
+      setNotifications(data.notifications);
+      setNotificationNotice("Notifications saved and published.");
+      return true;
+    } catch (saveError) {
+      setNotificationError(
+        saveError instanceof Error ? saveError.message : "Could not save notifications."
+      );
+      return false;
+    } finally {
+      setIsSavingNotification(false);
+    }
+  };
+
+  const createNotification = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = notificationTitle.trim().normalize("NFC");
+    const message = notificationMessage.trim().normalize("NFC");
+    if (!title || !message) {
+      setNotificationError("Enter both a title and a message.");
+      return;
+    }
+    if (notifications.length >= 100) {
+      setNotificationError("The notification list is full. Delete an old notification first.");
+      return;
+    }
+
+    const notification: SiteNotification = {
+      id: crypto.randomUUID(),
+      title,
+      message,
+      createdAt: new Date().toISOString(),
+    };
+    if (await saveNotifications([notification, ...notifications])) {
+      setNotificationTitle("");
+      setNotificationMessage("");
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    await saveNotifications(notifications.filter((notification) => notification.id !== id));
   };
 
   const selectPerson = (location: MapLocation) => {
@@ -281,12 +360,15 @@ export function AdminPanel() {
     setMaintenanceEndsAt(null);
     setMaintenanceEndsAtDraft("");
     setLocations([]);
+    setNotifications([]);
     setSelectedPersonId("");
     setStatus("signed-out");
     setMaintenanceNotice("");
     setMaintenanceError("");
     setLocationNotice("");
     setLocationError("");
+    setNotificationError("");
+    setNotificationNotice("");
     setLoginError("");
   };
 
@@ -513,6 +595,90 @@ export function AdminPanel() {
                 )}
               </div>
               <div className="admin-connection"><ShieldCheck size={16} /> Location is saved securely in Supabase</div>
+            </section>
+
+            <section className="admin-card admin-notification-settings" aria-labelledby="admin-notification-title">
+              <div className="admin-section-heading">
+                <div className="admin-icon"><Bell size={20} /></div>
+                <div>
+                  <p className="admin-eyebrow">Share an update</p>
+                  <h2 id="admin-notification-title">Notifications</h2>
+                </div>
+              </div>
+              <p className="admin-muted">
+                Publish a short message for visitors. Their notification bell will show a dot until they open it.
+              </p>
+              <form className="admin-notification-form" onSubmit={createNotification}>
+                <label>
+                  Title
+                  <input
+                    maxLength={120}
+                    value={notificationTitle}
+                    onChange={(event) => setNotificationTitle(event.target.value)}
+                    placeholder="A little update"
+                    required
+                  />
+                </label>
+                <label>
+                  Message
+                  <textarea
+                    maxLength={1000}
+                    rows={3}
+                    value={notificationMessage}
+                    onChange={(event) => setNotificationMessage(event.target.value)}
+                    placeholder="Write your announcement..."
+                    required
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="admin-primary-button"
+                  disabled={isSavingNotification}
+                >
+                  <Bell size={15} />
+                  {isSavingNotification ? "Publishing..." : "Publish notification"}
+                </button>
+              </form>
+              {(notificationError || notificationNotice) && (
+                <div
+                  className={`admin-feedback ${notificationError ? "is-error" : "is-success"}`}
+                  role={notificationError ? "alert" : "status"}
+                >
+                  {notificationError || notificationNotice}
+                </div>
+              )}
+              <div className="admin-notification-list-heading">
+                <strong>Published</strong>
+                <span>{notifications.length} / 100</span>
+              </div>
+              {notifications.length > 0 ? (
+                <div className="admin-notification-list">
+                  {notifications.map((notification) => (
+                    <article className="admin-notification-item" key={notification.id}>
+                      <div>
+                        <strong>{notification.title}</strong>
+                        <p>{notification.message}</p>
+                        <time dateTime={notification.createdAt}>
+                          {new Date(notification.createdAt).toLocaleString()}
+                        </time>
+                      </div>
+                      <button
+                        type="button"
+                        className="admin-notification-delete"
+                        aria-label={`Delete ${notification.title}`}
+                        title="Delete notification"
+                        disabled={isSavingNotification}
+                        onClick={() => void deleteNotification(notification.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="admin-notification-empty">No notifications published yet.</p>
+              )}
+              <div className="admin-connection"><ShieldCheck size={16} /> Notifications are stored in Supabase</div>
             </section>
           </div>
         </div>

@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyAdminPassword } from "@/lib/admin-auth";
 import type { MapLocation } from "@/lib/map-location";
-import { getSiteSettings, parseMapLocations, updateSiteSettings } from "@/lib/site-settings";
+import type { SiteNotification } from "@/lib/site-notification";
+import {
+  getSiteSettings,
+  parseMapLocations,
+  parseSiteNotifications,
+  updateSiteSettings,
+} from "@/lib/site-settings";
 
 async function authorize(request: Request) {
   const password = request.headers.get("x-admin-password");
@@ -33,8 +39,14 @@ export async function PATCH(request: Request) {
   const authError = await authorize(request);
   if (authError) return authError;
 
-  let body: { maintenance?: unknown; maintenanceEndsAt?: unknown; locations?: unknown };
+  let body: {
+    maintenance?: unknown;
+    maintenanceEndsAt?: unknown;
+    locations?: unknown;
+    notifications?: unknown;
+  };
   let locations: MapLocation[] | undefined;
+  let notifications: SiteNotification[] | undefined;
   let maintenanceEndsAt: string | null | undefined;
   try {
     const requestBody: unknown = await request.json();
@@ -45,6 +57,7 @@ export async function PATCH(request: Request) {
       maintenance?: unknown;
       maintenanceEndsAt?: unknown;
       locations?: unknown;
+      notifications?: unknown;
     };
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
@@ -79,10 +92,21 @@ export async function PATCH(request: Request) {
       );
     }
   }
+  if ("notifications" in body) {
+    try {
+      notifications = parseSiteNotifications(body.notifications);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Invalid notifications." },
+        { status: 400 }
+      );
+    }
+  }
   if (
     !("maintenance" in body) &&
     !("maintenanceEndsAt" in body) &&
-    !("locations" in body)
+    !("locations" in body) &&
+    !("notifications" in body)
   ) {
     return NextResponse.json({ error: "Provide a setting to update." }, { status: 400 });
   }
@@ -92,6 +116,7 @@ export async function PATCH(request: Request) {
       ...(typeof body.maintenance === "boolean" ? { maintenance: body.maintenance } : {}),
       ...(maintenanceEndsAt !== undefined ? { maintenanceEndsAt } : {}),
       ...(locations ? { locations } : {}),
+      ...(notifications !== undefined ? { notifications } : {}),
     };
     return NextResponse.json(await updateSiteSettings(updates));
   } catch (error) {

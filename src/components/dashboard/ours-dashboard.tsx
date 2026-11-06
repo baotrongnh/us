@@ -31,6 +31,7 @@ import { LanguageProvider, useLanguage, type TranslationKey } from "@/components
 import { formatLocalizedDate } from "@/lib/date-format";
 import type { RecentItem } from "@/lib/types";
 import type { MapLocation } from "@/lib/map-location";
+import type { SiteNotification } from "@/lib/site-notification";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const navigationItems: { icon: string; label: TranslationKey; section: Section }
   { icon: "letters", label: "letters", section: "letters" },
   { icon: "comingSoon", label: "comingSoon", section: "comingSoon" },
 ];
+const notificationsSeenStorageKey = "ours-notifications-seen-at";
 
 // ── NavItem ──────────────────────────────────────────────────────────────────
 
@@ -242,7 +244,13 @@ function Sidebar({
 
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
-function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
+function DashboardContent({
+  mapLocations,
+  initialNotifications,
+}: {
+  mapLocations: MapLocation[];
+  initialNotifications: SiteNotification[];
+}) {
   const { t, locale } = useLanguage();
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") return "pastel-pink";
@@ -256,6 +264,8 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
   const [notice, setNotice] = useState("");
   const [isMemoryDialogOpen, setIsMemoryDialogOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notificationsSeenAt, setNotificationsSeenAt] = useState(0);
   const [memoryTitle, setMemoryTitle] = useState("");
   const [memoryLocation, setMemoryLocation] = useState("");
   const [recentItems, setRecentItems] = useState<RecentItem[]>(
@@ -277,6 +287,43 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
   }, [theme]);
 
   useEffect(() => {
+    const savedStateTimer = window.setTimeout(() => {
+      try {
+        const savedSeenAt = Number(window.localStorage.getItem(notificationsSeenStorageKey));
+        if (Number.isFinite(savedSeenAt) && savedSeenAt > 0) setNotificationsSeenAt(savedSeenAt);
+      } catch (error) {
+        console.error("Could not read notification view state from local storage.", error);
+      }
+    }, 0);
+
+    let active = true;
+    const refreshNotifications = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const response = await fetch("/api/notifications", { cache: "no-store" });
+        const data = (await response.json()) as {
+          notifications?: SiteNotification[];
+          error?: string;
+        };
+        if (!response.ok || !Array.isArray(data.notifications)) {
+          throw new Error(data.error ?? "Could not load notifications.");
+        }
+        if (active) setNotifications(data.notifications);
+      } catch (error) {
+        console.error("Could not refresh notifications.", error);
+      }
+    };
+
+    void refreshNotifications();
+    const interval = window.setInterval(() => void refreshNotifications(), 60_000);
+    return () => {
+      active = false;
+      window.clearTimeout(savedStateTimer);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isNotificationsOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setIsNotificationsOpen(false);
@@ -296,6 +343,25 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
     setNotice(msg);
     window.setTimeout(() => setNotice(""), duration);
   };
+
+  const openNotifications = () => {
+    setIsNotificationsOpen(true);
+    const newestNotificationTime = notifications.reduce(
+      (latest, notification) => Math.max(latest, Date.parse(notification.createdAt) || 0),
+      0
+    );
+    const seenAt = Math.max(Date.now(), newestNotificationTime);
+    setNotificationsSeenAt(seenAt);
+    try {
+      window.localStorage.setItem(notificationsSeenStorageKey, String(seenAt));
+    } catch (error) {
+      console.error("Could not save notification view state to local storage.", error);
+    }
+  };
+
+  const hasUnreadNotifications = notifications.some(
+    (notification) => Date.parse(notification.createdAt) > notificationsSeenAt
+  );
 
   const downloadPreviewImage = async () => {
     if (!imagePreview || isDownloadingImage) return;
@@ -371,7 +437,7 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
             aria-modal="true"
             id="notifications-dialog"
             aria-labelledby="notifications-title"
-            aria-describedby="notifications-empty-message"
+            aria-describedby={notifications.length === 0 ? "notifications-empty-message" : undefined}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -384,12 +450,34 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
             </button>
             <p className="eyebrow">{t("notifications")}</p>
             <h2 id="notifications-title">{t("notifications")}</h2>
-            <div className="notifications-empty-state">
-              <span className="notifications-empty-icon" aria-hidden="true">
-                <Bell size={20} />
-              </span>
-              <p id="notifications-empty-message">{t("noNewNotifications")}</p>
-            </div>
+            {notifications.length > 0 ? (
+              <div className="notifications-list">
+                {notifications.map((notification) => (
+                  <article className="notification-item" key={notification.id}>
+                    <span className="notification-item-icon" aria-hidden="true">
+                      <Bell size={17} />
+                    </span>
+                    <div>
+                      <h3>{notification.title}</h3>
+                      <p>{notification.message}</p>
+                      <time dateTime={notification.createdAt}>
+                        {new Date(notification.createdAt).toLocaleString(locale, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </time>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="notifications-empty-state">
+                <span className="notifications-empty-icon" aria-hidden="true">
+                  <Bell size={20} />
+                </span>
+                <p id="notifications-empty-message">{t("noNewNotifications")}</p>
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -429,9 +517,10 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
                 aria-haspopup="dialog"
                 aria-expanded={isNotificationsOpen}
                 aria-controls="notifications-dialog"
-                onClick={() => setIsNotificationsOpen(true)}
+                onClick={openNotifications}
               >
                 <Bell size={17} />
+                {hasUnreadNotifications && <span className="notification-unread-dot" aria-hidden="true" />}
               </button>
             </div>
           </div>
@@ -581,10 +670,19 @@ function DashboardContent({ mapLocations }: { mapLocations: MapLocation[] }) {
   );
 }
 
-export function OursDashboard({ mapLocations }: { mapLocations: MapLocation[] }) {
+export function OursDashboard({
+  mapLocations,
+  initialNotifications,
+}: {
+  mapLocations: MapLocation[];
+  initialNotifications: SiteNotification[];
+}) {
   return (
     <LanguageProvider>
-      <DashboardContent mapLocations={mapLocations} />
+      <DashboardContent
+        mapLocations={mapLocations}
+        initialNotifications={initialNotifications}
+      />
     </LanguageProvider>
   );
 }

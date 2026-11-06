@@ -1,5 +1,6 @@
 import siteConfig from "@/data/site-config.json";
 import type { MapLocation } from "@/lib/map-location";
+import type { SiteNotification } from "@/lib/site-notification";
 
 type SiteSettingsRow = {
   id: number;
@@ -10,6 +11,7 @@ type SiteSettingsUpdates = {
   maintenance?: boolean;
   maintenanceEndsAt?: string | null;
   locations?: MapLocation[];
+  notifications?: SiteNotification[];
 };
 
 function getSupabaseConfig() {
@@ -100,6 +102,44 @@ export function parseMapLocations(value: unknown): MapLocation[] {
   });
 }
 
+export function parseSiteNotifications(value: unknown): SiteNotification[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 100) {
+    throw new Error("Supabase site_config.setting.notifications must be an array of up to 100 items.");
+  }
+
+  return value.map((item) => {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      !("id" in item) ||
+      !("title" in item) ||
+      !("message" in item) ||
+      !("createdAt" in item) ||
+      typeof item.id !== "string" ||
+      item.id.length === 0 ||
+      item.id.length > 100 ||
+      typeof item.title !== "string" ||
+      item.title.trim().length === 0 ||
+      item.title.length > 120 ||
+      typeof item.message !== "string" ||
+      item.message.trim().length === 0 ||
+      item.message.length > 1000 ||
+      typeof item.createdAt !== "string" ||
+      !Number.isFinite(Date.parse(item.createdAt))
+    ) {
+      throw new Error("Invalid notification in Supabase site settings.");
+    }
+
+    return {
+      id: item.id,
+      title: item.title.normalize("NFC"),
+      message: item.message.normalize("NFC"),
+      createdAt: new Date(item.createdAt).toISOString(),
+    };
+  });
+}
+
 export async function getSiteSettings() {
   const config = getSupabaseConfig();
   if (!config) {
@@ -124,11 +164,22 @@ export async function getSiteSettings() {
     typeof setting.map === "object" && setting.map !== null
       ? setting.map as Record<string, unknown>
       : null;
+  const notifications = parseSiteNotifications(setting.notifications);
   return {
     maintenance: setting.maintenance,
     maintenanceEndsAt: typeof maintenanceEndsAt === "string" ? maintenanceEndsAt : null,
     locations: parseMapLocations(mapSetting?.locations),
+    notifications,
   };
+}
+
+export async function getPublicNotifications() {
+  const config = getSupabaseConfig();
+  if (!config) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured.");
+  }
+  const { setting } = await getSiteSettingsRow(config);
+  return parseSiteNotifications(setting.notifications);
 }
 
 export async function updateSiteSettings(updates: SiteSettingsUpdates) {
@@ -139,7 +190,8 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
   if (
     (updates.maintenance === undefined &&
       updates.maintenanceEndsAt === undefined &&
-      updates.locations === undefined) ||
+      updates.locations === undefined &&
+      updates.notifications === undefined) ||
     (updates.maintenance !== undefined && typeof updates.maintenance !== "boolean")
   ) {
     throw new Error("Provide a valid maintenance value or map locations to update.");
@@ -151,6 +203,9 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
       Date.parse(updates.maintenanceEndsAt) <= Date.now())
   ) {
     throw new Error("The maintenance end time must be in the future.");
+  }
+  if (updates.notifications !== undefined) {
+    parseSiteNotifications(updates.notifications);
   }
 
   const currentRow = await getSiteSettingsRow(config);
@@ -172,6 +227,9 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
       ...mapSetting,
       locations: locations.map(({ id, city, coords }) => ({ id, city, coords })),
     };
+  }
+  if (updates.notifications) {
+    setting.notifications = parseSiteNotifications(updates.notifications);
   }
 
   const response = await fetch(`${config.url}?id=eq.1`, {
@@ -211,6 +269,10 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
     maintenanceEndsAt:
       typeof savedMaintenanceEndsAt === "string" ? savedMaintenanceEndsAt : null,
   };
+  const notificationSettings =
+    updates.notifications !== undefined
+      ? { notifications: parseSiteNotifications(rows[0].setting.notifications) }
+      : {};
   if (updates.locations) {
     const updatedMap = rows[0].setting.map;
     const locations = parseMapLocations(
@@ -218,7 +280,7 @@ export async function updateSiteSettings(updates: SiteSettingsUpdates) {
         ? (updatedMap as Record<string, unknown>).locations
         : undefined
     );
-    return { ...maintenanceSettings, locations };
+    return { ...maintenanceSettings, ...notificationSettings, locations };
   }
-  return maintenanceSettings;
+  return { ...maintenanceSettings, ...notificationSettings };
 }

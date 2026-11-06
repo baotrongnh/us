@@ -15,5 +15,10 @@ export default async function Home() {
     );
   }
 
-  return <OursDashboard mapLocations={settings.locations} />;
+  return (
+    <OursDashboard
+      mapLocations={settings.locations}
+      initialNotifications={settings.notifications}
+    />
+  );
 }
