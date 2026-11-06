@@ -23,6 +23,8 @@ interface Letter {
 interface PreparedLetterPages {
   aspectRatio: number;
   sources: string[];
+  sourceWidth: number;
+  sourceHeight: number;
 }
 
 function loadLetterImage(src: string): Promise<HTMLImageElement> {
@@ -189,7 +191,14 @@ function LetterDetail({
         // Keep the original files instead of creating a lossy canvas copy.
         const sources = images.map((image) => image.src);
 
-        if (!cancelled) setPreparedPages({ aspectRatio, sources });
+        if (!cancelled) {
+          setPreparedPages({
+            aspectRatio,
+            sources,
+            sourceWidth: Math.min(...images.map((image) => image.naturalWidth)),
+            sourceHeight: Math.min(...images.map((image) => image.naturalHeight)),
+          });
+        }
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -222,6 +231,43 @@ function LetterDetail({
     const animationFrame = window.requestAnimationFrame(() => pageFlipRef.current?.update());
     return () => window.cancelAnimationFrame(animationFrame);
   }, [pageSize]);
+
+  useEffect(() => {
+    if (!isBookReady || !preparedPages) return;
+
+    const applyCanvasResolution = () => {
+      const canvas = bookHostRef.current?.querySelector("canvas");
+      if (!canvas) return;
+
+      const { width, height } = canvas.getBoundingClientRect();
+      if (!width || !height) return;
+
+      const sourceScale = Math.min(
+        preparedPages.sourceWidth / width,
+        preparedPages.sourceHeight / height,
+      );
+      const pixelRatio = Math.max(
+        1,
+        Math.min(window.devicePixelRatio || 1, sourceScale, 2.5),
+      );
+      const pixelWidth = Math.round(width * pixelRatio);
+      const pixelHeight = Math.round(height * pixelRatio);
+
+      if (canvas.width === pixelWidth && canvas.height === pixelHeight) return;
+
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+      const context = canvas.getContext("2d");
+      context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      if (context) context.imageSmoothingQuality = "high";
+      pageFlipRef.current?.update();
+    };
+
+    applyCanvasResolution();
+    const handleResize = () => window.requestAnimationFrame(applyCanvasResolution);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isBookReady, pageSize, preparedPages]);
 
   useEffect(() => {
     const host = bookHostRef.current;
